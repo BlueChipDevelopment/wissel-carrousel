@@ -32,6 +32,7 @@ export function TeamPage() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [dirty, setDirty] = useState(false)
   const [blok, setBlok] = useState(0)
+  const [wedstrijdOpen, setWedstrijdOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [fout, setFout] = useState<string | null>(null)
   const [laden, setLaden] = useState(true)
@@ -133,51 +134,84 @@ export function TeamPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Wedstrijd: datum, tegenstander, opslaan */}
-      <section className="card no-print flex flex-wrap items-end gap-3 p-4">
-        <label className="flex flex-col gap-1">
-          <span className="eyebrow">Wedstrijddatum</span>
-          <input type="date" className="field" value={draft.date} onChange={(e) => kiesDatum(e.target.value)} />
-        </label>
-        <label className="flex min-w-[200px] flex-1 flex-col gap-1">
-          <span className="eyebrow">Tegenstander (optioneel)</span>
-          <input
-            type="text"
-            className="field"
-            placeholder="bijv. SVMM JO8-2"
-            value={draft.opponent}
-            onChange={(e) => wijzig({ opponent: e.target.value })}
-          />
-        </label>
-        <div className="flex items-center gap-3">
-          <button type="button" className="btn btn-primary" onClick={opslaan} disabled={!dirty && !!draft.id}>
-            {draft.id ? (dirty ? 'Wijzigingen opslaan' : 'Opgeslagen') : 'Wedstrijd opslaan'}
+      {/* Wedstrijd: ingeklapt één regel; uitgeklapt datum, tegenstander en eerdere wedstrijden */}
+      <section className="card no-print flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 text-left"
+            aria-expanded={wedstrijdOpen}
+            onClick={() => setWedstrijdOpen((o) => !o)}
+          >
+            <span className="font-display text-[21px] font-semibold uppercase tracking-[0.02em] whitespace-nowrap">
+              {formatDateShort(draft.date)}
+            </span>
+            <span className="hint whitespace-nowrap underline sm:order-last">{wedstrijdOpen ? 'sluit' : 'wijzig'}</span>
+            <span className="basis-full truncate text-muted sm:basis-auto sm:flex-1">
+              {draft.opponent.trim() ? `tegen ${draft.opponent.trim()}` : 'tegenstander onbekend'}
+            </span>
           </button>
-          {status && <span className="hint">{status}</span>}
+          <div className="flex items-center gap-3">
+            <button type="button" className="btn btn-primary btn-small" onClick={opslaan} disabled={!dirty && !!draft.id}>
+              {draft.id ? (dirty ? 'Wijzigingen opslaan' : 'Opgeslagen') : 'Wedstrijd opslaan'}
+            </button>
+            {status && <span className="hint">{status}</span>}
+          </div>
         </div>
-        {fout && <p className="w-full text-[14px] text-voor">{fout}</p>}
-        {matches.length > 0 && (
-          <p className="hint w-full">
-            Eerdere wedstrijden:{' '}
-            {matches.slice(0, 6).map((m, i) => (
-              <span key={m.id}>
-                {i > 0 && ' · '}
-                <button type="button" className="underline" onClick={() => kiesDatum(m.date)}>
-                  {formatDateShort(m.date)}
-                </button>
-              </span>
-            ))}
-          </p>
+        {fout && <p className="text-[14px] text-voor">{fout}</p>}
+        {wedstrijdOpen && (
+          <div className="flex flex-wrap items-end gap-3 border-t border-line pt-3">
+            <label className="flex flex-col gap-1">
+              <span className="eyebrow">Wedstrijddatum</span>
+              <input type="date" className="field" value={draft.date} onChange={(e) => kiesDatum(e.target.value)} />
+            </label>
+            <label className="flex min-w-[200px] flex-1 flex-col gap-1">
+              <span className="eyebrow">Tegenstander (optioneel)</span>
+              <input
+                type="text"
+                className="field"
+                placeholder="bijv. SVMM JO8-2"
+                value={draft.opponent}
+                onChange={(e) => wijzig({ opponent: e.target.value })}
+              />
+            </label>
+            {matches.length > 0 && (
+              <p className="hint w-full">
+                Opgeslagen wedstrijden:{' '}
+                {matches
+                  .slice()
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .slice(-8)
+                  .map((m, i) => (
+                    <span key={m.id}>
+                      {i > 0 && ' · '}
+                      <button
+                        type="button"
+                        className={m.date === draft.date ? 'font-semibold text-ink' : 'underline'}
+                        onClick={() => kiesDatum(m.date)}
+                      >
+                        {formatDateShort(m.date)}
+                      </button>
+                    </span>
+                  ))}
+              </p>
+            )}
+          </div>
         )}
       </section>
 
-      {/* Feiten */}
-      <div className="card flex flex-wrap overflow-hidden shadow-none">
-        <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
-        <Feit b="6 tegen 6" s="keeper + 5" />
-        <Feit b="42,5 × 30 m" s="kwartveld" />
-        <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
-      </div>
+      {/* Spelregels: ingeklapt, alleen op verzoek */}
+      <details className="card overflow-hidden shadow-none">
+        <summary className="cursor-pointer px-[14px] py-[9px] font-display text-[14px] font-semibold uppercase tracking-[0.1em] text-muted select-none">
+          Spelregels JO8
+        </summary>
+        <div className="flex flex-wrap border-t border-line">
+          <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
+          <Feit b="6 tegen 6" s="keeper + 5" />
+          <Feit b="42,5 × 30 m" s="kwartveld" />
+          <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
+        </div>
+      </details>
 
       {kanTonen ? (
         <>
