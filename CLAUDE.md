@@ -41,10 +41,12 @@ npm run db:types    # database.ts opnieuw genereren na een schemawijziging
 
 ```
 src/
-├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart. 100% getest.
+├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart, klok.ts = de
+│                  # wedstrijdklok (kwart van 10 min, wisselsignaal op 5). 100% getest.
 ├── services/db/   # De enige weg naar data. index.ts kiest Supabase of demo-stand (localStorage).
 ├── data/seed.ts   # Seed-teams voor de demo-stand (gelijk houden met de seed-migration!)
-├── components/    # Pitch, BlockTabs, RolesPanel, ScheduleTable, LineupEditor, TeamNav
+├── components/    # Pitch, BlockTabs, RolesPanel, ScheduleTable (tabel op desktop, kaartjes op
+│                  # mobiel), MatchClock (klok; zet het actieve blok mee), LineupEditor, TeamNav
 ├── pages/         # TeamPage (opstelling), MatchesPage (geschiedenis), PlayersPage
 ├── hooks/         # useTeams
 ├── utils/         # dateUtils — datums altijd YYYY-MM-DD, nooit new Date('YYYY-MM-DD')

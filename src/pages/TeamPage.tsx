@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useTeam } from '@/App'
 import { BlockTabs } from '@/components/BlockTabs'
 import { LineupEditor } from '@/components/LineupEditor'
+import { MatchClock } from '@/components/MatchClock'
 import { Pitch } from '@/components/Pitch'
 import { RolesPanel } from '@/components/RolesPanel'
 import { ScheduleTable } from '@/components/ScheduleTable'
@@ -180,6 +181,7 @@ export function TeamPage() {
       {kanTonen ? (
         <>
           <section className="flex flex-col gap-4">
+            <MatchClock sleutel={team.id} vijf={!!vijf} onBlok={setBlok} />
             <BlockTabs blokken={sch} actief={geldigBlok} vijf={!!vijf} naam={naam} onKies={setBlok} />
             <div className="grid items-start gap-[22px] md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
               <div className="rounded-[14px] bg-pitch p-3 shadow-card">

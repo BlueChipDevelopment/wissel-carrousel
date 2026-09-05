@@ -18,7 +18,52 @@ export function ScheduleTable({ blokken, opstelling, naam, achterIds }: Props) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[23px] font-semibold tracking-[0.03em]">Hele wedstrijd</h2>
-      <div className="card overflow-x-auto">
+      {/* Telefoon: per blok een kaartje, met de wissel als hoofdzaak. */}
+      <ol className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
+        {blokken.map((b, i) => {
+          const paren = wisselParen(blokken, i, opstelling)
+          return (
+            <li key={i} className="card px-[14px] py-[11px] shadow-none">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-display text-[19px] font-bold">
+                  Kwart {b.kwart + 1}
+                  <span className="pl-2 font-sans text-[13px] font-normal tracking-[0.04em] text-muted">
+                    {b.van}–{b.tot}'
+                  </span>
+                </span>
+                <span className="text-[14px]">
+                  <span className="text-muted">keeper </span>
+                  <b>{b.keeper ? naam(b.keeper) : '–'}</b>
+                </span>
+              </div>
+              <div className="mt-[6px] text-[14.5px] leading-snug">
+                {i === 0 ? (
+                  <span className="text-muted">Beginopstelling</span>
+                ) : paren.length ? (
+                  paren.map((x, k) => (
+                    <span key={k} className="block">
+                      <WisselTekst x={x} naam={naam} kort />
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted">Geen wissels</span>
+                )}
+              </div>
+              <div className="mt-[6px] grid grid-cols-2 gap-x-3 text-[13.5px] text-muted">
+                <span>
+                  <span className="text-achter">achter</span> {b.verdedigers.map(naam).join(', ')}
+                </span>
+                <span>
+                  <span className="text-voor">voor</span> {b.aanval.map(naam).join(', ')}
+                </span>
+                <span className="col-span-2">bank {b.bank.length ? b.bank.map(naam).join(', ') : '–'}</span>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+
+      <div className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[720px] border-collapse text-[14.5px]">
           <thead>
             <tr className="border-b border-line">
