@@ -46,7 +46,8 @@ src/
 ├── services/db/   # De enige weg naar data. index.ts kiest Supabase of demo-stand (localStorage).
 ├── data/seed.ts   # Seed-teams voor de demo-stand (gelijk houden met de seed-migration!)
 ├── components/    # Pitch, BlockTabs, RolesPanel, ScheduleTable (tabel op desktop, kaartjes op
-│                  # mobiel), MatchClock (klok; zet het actieve blok mee), LineupEditor, TeamNav
+│                  # mobiel), MatchClock (klok; zet het actieve blok mee), MinutesList (speeltijd,
+│                  # onderaan), LineupEditor, TeamNav
 ├── pages/         # TeamPage (opstelling), MatchesPage (geschiedenis), PlayersPage
 ├── hooks/         # useTeams
 ├── utils/         # dateUtils — datums altijd YYYY-MM-DD, nooit new Date('YYYY-MM-DD')

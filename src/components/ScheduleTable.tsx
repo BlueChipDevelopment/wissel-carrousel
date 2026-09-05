@@ -1,4 +1,4 @@
-import { minuten, wisselParen } from '@/domain/schedule'
+import { wisselParen } from '@/domain/schedule'
 import type { Blok, Opstelling } from '@/domain/types'
 import { WisselTekst } from './RolesPanel'
 
@@ -6,12 +6,9 @@ interface Props {
   blokken: Blok[]
   opstelling: Opstelling
   naam: (id: string) => string
-  achterIds: string[]
 }
 
-export function ScheduleTable({ blokken, opstelling, naam, achterIds }: Props) {
-  const spelers = [...opstelling.achter, ...opstelling.voor]
-  const mins = minuten(blokken, spelers)
+export function ScheduleTable({ blokken, opstelling, naam }: Props) {
   const th = 'px-[13px] py-[9px] text-left font-display text-[13px] font-semibold uppercase tracking-[0.1em] text-muted'
   const td = 'px-[13px] py-[9px] align-middle border-b border-line'
 
@@ -108,27 +105,6 @@ export function ScheduleTable({ blokken, opstelling, naam, achterIds }: Props) {
             })}
           </tbody>
         </table>
-      </div>
-
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(178px,1fr))] gap-[9px]">
-        {spelers
-          .slice()
-          .sort((a, b) => (mins[b] ?? 0) - (mins[a] ?? 0) || naam(a).localeCompare(naam(b)))
-          .map((p) => {
-            const m = mins[p] ?? 0
-            const kleur = achterIds.includes(p) ? 'var(--color-achter)' : 'var(--color-voor)'
-            return (
-              <div key={p} className="card px-3 pt-[9px] pb-[11px] shadow-none">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold">{naam(p)}</span>
-                  <span className="font-display text-[17px] font-semibold tabular-nums">{m}'</span>
-                </div>
-                <div className="mt-[7px] h-[5px] overflow-hidden rounded-[3px] bg-sunk">
-                  <i className="block h-full" style={{ width: `${(m / 40) * 100}%`, background: kleur }} />
-                </div>
-              </div>
-            )
-          })}
       </div>
     </section>
   )

@@ -4,6 +4,7 @@ import { useTeam } from '@/App'
 import { BlockTabs } from '@/components/BlockTabs'
 import { LineupEditor } from '@/components/LineupEditor'
 import { MatchClock } from '@/components/MatchClock'
+import { MinutesList } from '@/components/MinutesList'
 import { Pitch } from '@/components/Pitch'
 import { RolesPanel } from '@/components/RolesPanel'
 import { ScheduleTable } from '@/components/ScheduleTable'
@@ -197,7 +198,7 @@ export function TeamPage() {
             </div>
           </section>
 
-          <ScheduleTable blokken={sch} opstelling={draft.opstelling} naam={naam} achterIds={draft.opstelling.achter} />
+          <ScheduleTable blokken={sch} opstelling={draft.opstelling} naam={naam} />
         </>
       ) : (
         <p className="hint">Zet minstens één speler achterin om het schema te zien.</p>
@@ -213,6 +214,8 @@ export function TeamPage() {
         }}
         onHussel={doeHussel}
       />
+
+      {kanTonen && <MinutesList blokken={sch} opstelling={draft.opstelling} naam={naam} />}
 
       <footer className="border-t border-line pt-4 text-[13.5px] text-muted">
         {vijf ? (
