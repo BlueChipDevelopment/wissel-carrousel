@@ -1,0 +1,14 @@
+# Statische SPA op Netlify. Env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) staan in de
+# Netlify UI, niet hier — zie docs/deploy.md.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
