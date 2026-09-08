@@ -12,7 +12,7 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 ## Het model
 
 - Per wedstrijd twee vaste linies: **4 achterin** (keeper + 2 verdedigers + 1 wissel) en
-  **4 voorin** (3 op het veld + 1 wissel). Formatie 1-2-3 of 1-2-1-2 (verandert alleen de
+  **4 voorin** (3 op het veld + 1 wissel). Formatie 1-2-3, 1-2-1-2 of 1-2-2-1 (verandert alleen de
   drie plekken voorin).
 - De **keeper komt uit de achterhoede en wisselt elk kwart** — met 4 achterin keept dus
   iedereen daar precies één kwart, ook de wissel.

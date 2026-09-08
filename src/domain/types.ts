@@ -8,7 +8,7 @@
 export type WisselStand = '5min' | 'kwart'
 
 /** Opstelling van de drie voorin. De achterhoede is altijd keeper + 2 verdedigers. */
-export type Formatie = '1-2-3' | '1-2-1-2'
+export type Formatie = '1-2-3' | '1-2-1-2' | '1-2-2-1'
 
 /** Wat de coach instelt vóór de wedstrijd. */
 export interface Opstelling {

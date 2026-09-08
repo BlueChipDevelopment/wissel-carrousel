@@ -5,6 +5,7 @@ import {
   blokken,
   hussel,
   keepers,
+  positieNamen,
   minuten,
   standaardVerdeling,
   vulSlots,
@@ -176,5 +177,23 @@ describe('hussel en verdeling', () => {
     expect(standaardVerdeling(ALLE).achter).toHaveLength(4)
     expect(standaardVerdeling(ALLE.slice(0, 7)).achter).toHaveLength(4)
     expect(standaardVerdeling(ALLE.slice(0, 6)).achter).toHaveLength(3)
+  })
+})
+
+describe('formaties', () => {
+  it('geven drie plekken voorin, elk met een eigen naam', () => {
+    for (const f of ['1-2-3', '1-2-1-2', '1-2-2-1'] as const) {
+      const namen = positieNamen(f)
+      expect(namen.achter).toHaveLength(2)
+      expect(namen.voor).toHaveLength(3)
+      expect(new Set(namen.voor).size).toBe(3)
+    }
+    expect(positieNamen('1-2-2-1').voor).toEqual(['middenvelder links', 'middenvelder rechts', 'spits'])
+  })
+
+  it('veranderen het wisselschema niet', () => {
+    const a = blokken(JO8)
+    const b = blokken({ ...JO8, formatie: '1-2-2-1' })
+    expect(b).toEqual(a)
   })
 })

@@ -33,7 +33,9 @@ export function positieNamen(formatie: Formatie): PositieNamen {
     voor:
       formatie === '1-2-1-2'
         ? ['middenvelder', 'spits links', 'spits rechts']
-        : ['linksvoor', 'spits', 'rechtsvoor'],
+        : formatie === '1-2-2-1'
+          ? ['middenvelder links', 'middenvelder rechts', 'spits']
+          : ['linksvoor', 'spits', 'rechtsvoor'],
   }
 }
 
@@ -229,6 +231,7 @@ export const WISSEL_STANDEN: { value: WisselStand; label: string; hint: string }
 export const FORMATIES: { value: Formatie; label: string }[] = [
   { value: '1-2-3', label: '1-2-3 — keeper, 2 achter, 3 voor' },
   { value: '1-2-1-2', label: '1-2-1-2 — met een middenvelder' },
+  { value: '1-2-2-1', label: '1-2-2-1 — twee middenvelders, één spits' },
 ]
 
 /**

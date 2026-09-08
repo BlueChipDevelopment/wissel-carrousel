@@ -32,6 +32,19 @@ const SPOTS: Record<
     ],
     labels: ['M', 'S', 'S'],
   },
+  '1-2-2-1': {
+    keeper: [150, 355],
+    verdediger: [
+      [72, 288],
+      [228, 288],
+    ],
+    aanval: [
+      [92, 222],
+      [208, 222],
+      [150, 118],
+    ],
+    labels: ['M', 'M', 'S'],
+  },
 }
 
 const VELD_H = 425
