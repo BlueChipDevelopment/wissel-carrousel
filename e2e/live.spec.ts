@@ -13,6 +13,8 @@ async function openTeam(page: Page) {
   await page.goto('/team/jo8-1')
   await expect(page.getByText('Demo-stand.')).toBeVisible()
   await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
+  // Webfonts verschuiven de layout nog even na de eerste render; anders slaat een sleep mis.
+  await page.evaluate(() => document.fonts.ready)
 }
 
 /** Namen van de markers op het veld, in tekenvolgorde (letter, naam, letter, naam, …). */
