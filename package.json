@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
@@ -19,6 +20,7 @@
     "react-router-dom": "^7.14.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

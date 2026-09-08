@@ -10,3 +10,6 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+test-results/
+playwright-report/
+playwright/.cache/

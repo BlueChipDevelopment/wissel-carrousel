@@ -18,7 +18,7 @@ keeperbeurten gedeeld moeten worden over telefoons en coaches heen.
 - **React 19 + Vite 7 + TypeScript**, SPA. **Tailwind 4** (config in `src/index.css` via `@theme`).
 - **Supabase** (Postgres + RLS) — Chris' account. Nog **geen login** (zie ADR-0001).
 - **Netlify** — statische SPA, auto-deploy vanuit GitHub. **PWA** via `vite-plugin-pwa`.
-- Tests: **Vitest**, domeinlogica volledig unit-getest.
+- Tests: **Vitest** (domeinlogica volledig unit-getest) en **Playwright** (`e2e/`, demo-stand, desktop + 390 px).
 
 ## Lees hierna
 
@@ -32,7 +32,8 @@ keeperbeurten gedeeld moeten worden over telefoons en coaches heen.
 npm install         # (bij een npm-fout over 'edgesOut': npm install --legacy-peer-deps)
 npm run dev         # http://localhost:5173 — zonder .env.local in demo-stand
 npm run build       # tsc -b && vite build -> dist/
-npm test            # vitest run
+npm test            # vitest run (domeinlogica)
+npm run test:e2e    # playwright, in de demo-stand (eerst: npx playwright install chromium)
 npm run db:push     # supabase db push (gekoppeld project)
 npm run db:types    # database.ts opnieuw genereren na een schemawijziging
 ```
