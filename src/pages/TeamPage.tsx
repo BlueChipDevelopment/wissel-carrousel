@@ -292,7 +292,9 @@ export function TeamPage() {
   if (!draft || !live) return <p className="text-voor">{fout ?? 'Er ging iets mis.'}</p>
 
   const geldigBlok = sch[Math.min(blok, sch.length - 1)] ? Math.min(blok, sch.length - 1) : 0
-  const kanTonen = sch.length > 0 && sch[geldigBlok].keeper !== null
+  // Zolang er iemand achterin staat is er een schema — ook als de coach in een blok de goal
+  // even leeg heeft gelaten (keeper naar de bank gesleept).
+  const kanTonen = sch.length > 0 && draft.opstelling.achter.length > 0
   const bewerkbaar = geldigBlok >= live.huidig
   const huidigBlok = sch[geldigBlok]
 

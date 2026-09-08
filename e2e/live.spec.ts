@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 /** viewBox van het veldje in de bewerkbare stand: 300 breed, 425 veld + 78 bank. */
 const VIEW = { w: 300, h: 503 }
-const PLEK = { bank0: [40, 455], verdedigerLinks: [72, 288] } as const
+const PLEK = { bank0: [40, 455], verdedigerLinks: [72, 288], goal: [150, 355], bank: [150, 462] } as const
 
 async function openTeam(page: Page) {
   await page.goto('/team/jo8-1')
@@ -100,6 +100,27 @@ test('een uitvaller vanaf blok 3: de rest wordt eerlijk verdeeld', async ({ page
   expect(rest).toHaveLength(7)
   expect(Math.max(...rest) - Math.min(...rest)).toBeLessThanOrEqual(5)
   expect(minuten.reduce((a, b) => a + b, 0)).toBe(240)
+})
+
+test('keeper naar de bank: goal leeg, maar het veld blijft staan (ook op een ander blok)', async ({ page }) => {
+  await openTeam(page)
+  const voor = await markerNamen(page)
+  const keeper = voor.veld[0]
+
+  await sleep(page, PLEK.goal, PLEK.bank)
+
+  await expect(page.getByRole('button', { name: `↶ Ongedaan: ${keeper} naar de bank` })).toBeVisible()
+  const na = await markerNamen(page)
+  expect(na.bank).toContain(keeper)
+  expect(na.veld).not.toContain(keeper)
+  await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
+
+  // Tussen blokken wisselen laat het veld gewoon staan, ook terug naar het blok zonder keeper.
+  await page.getByRole('tab', { name: /5–10/ }).click()
+  await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
+  await page.getByRole('tab', { name: /0–5/ }).click()
+  await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
+  await expect(page.getByText('Zet minstens één speler achterin')).toHaveCount(0)
 })
 
 test('vastgelegde blokken zijn niet meer te bewerken', async ({ page }) => {
