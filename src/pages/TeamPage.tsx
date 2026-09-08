@@ -61,6 +61,7 @@ export function TeamPage() {
   const [dirty, setDirty] = useState(false)
   const [blok, setBlok] = useState(0)
   const [wedstrijdOpen, setWedstrijdOpen] = useState(false)
+  const [regelsOpen, setRegelsOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [fout, setFout] = useState<string | null>(null)
   const [laden, setLaden] = useState(true)
@@ -330,8 +331,28 @@ export function TeamPage() {
               {draft.id ? (dirty ? 'Wijzigingen opslaan' : 'Opgeslagen') : 'Wedstrijd opslaan'}
             </button>
             {status && <span className="hint">{status}</span>}
+            <button
+              type="button"
+              className={`inline-flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full border font-display text-[14px] font-bold ${
+                regelsOpen ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-sunk text-muted'
+              }`}
+              aria-label="Spelregels JO8"
+              aria-expanded={regelsOpen}
+              title="Spelregels JO8"
+              onClick={() => setRegelsOpen((o) => !o)}
+            >
+              i
+            </button>
           </div>
         </div>
+        {regelsOpen && (
+          <div className="-mx-4 -mb-4 flex flex-wrap border-t border-line" role="region" aria-label="Spelregels JO8">
+            <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
+            <Feit b="6 tegen 6" s="keeper + 5" />
+            <Feit b="42,5 × 30 m" s="kwartveld" />
+            <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
+          </div>
+        )}
         {fout && <p className="text-[14px] text-voor">{fout}</p>}
         {remote && (
           <p className="rounded-lg border border-keeper/45 bg-keeper/15 px-[13px] py-[10px] text-[14px]">
@@ -385,19 +406,6 @@ export function TeamPage() {
           </div>
         )}
       </section>
-
-      {/* Spelregels: ingeklapt, alleen op verzoek */}
-      <details className="card overflow-hidden shadow-none">
-        <summary className="cursor-pointer px-[14px] py-[9px] font-display text-[14px] font-semibold uppercase tracking-[0.1em] text-muted select-none">
-          Spelregels JO8
-        </summary>
-        <div className="flex flex-wrap border-t border-line">
-          <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
-          <Feit b="6 tegen 6" s="keeper + 5" />
-          <Feit b="42,5 × 30 m" s="kwartveld" />
-          <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
-        </div>
-      </details>
 
       {kanTonen ? (
         <>
