@@ -85,6 +85,16 @@ Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast hou
   ophalen". Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op.
 - Wissel je van bankstand (5 min ↔ kwart) terwijl er een live-stand is, dan begint die opnieuw.
 
+## De klok in de broekzak
+
+Met het scherm op slot zet de browser JavaScript stil, dus een piepje uit code hoor je dan
+niet. Daarom speelt de klok bij Start een audiobestand van precies één kwart af
+(`public/kwart.mp3`, gemaakt met `npm run audio`): stilte, een piep op 5:00, een dubbele piep
+op 10:00. De audiospeler van de telefoon houdt de tijd bij en speelt door met het scherm op
+slot. Pauze en Reset stoppen het; Verder hervat op de klokstand. Zolang de klok loopt blijft
+het scherm aan (Wake Lock) als de telefoon in beeld is. Trillen werkt alleen met de app in
+beeld. Geen notificaties, geen server. Het bestand zit in de PWA-cache voor velden zonder bereik.
+
 ## Buiten scope v1
 
 - Login / rechten (zie ADR-0001 voor het upgradepad).

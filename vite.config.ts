@@ -26,7 +26,9 @@ export default defineConfig({
       workbox: {
         // App-shell offline; data komt van Supabase en heeft netwerk nodig.
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // kwart.mp3 (het wisselsignaal) hoort erbij: langs de lijn is er niet altijd bereik.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,mp3}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],

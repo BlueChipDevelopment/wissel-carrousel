@@ -34,6 +34,7 @@ npm run dev         # http://localhost:5173 — zonder .env.local in demo-stand
 npm run build       # tsc -b && vite build -> dist/
 npm test            # vitest run (domeinlogica)
 npm run test:e2e    # playwright, in de demo-stand (eerst: npx playwright install chromium)
+npm run audio       # public/kwart.mp3 opnieuw genereren (het kwart-geluid van de klok)
 npm run db:push     # supabase db push (gekoppeld project)
 npm run db:types    # database.ts opnieuw genereren na een schemawijziging
 ```
@@ -45,6 +46,8 @@ src/
 ├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart (het plan),
 │                  # live.ts = de werkelijkheid tijdens de wedstrijd (herberekenen, slepen,
 │                  # uitvallers, tellen), klok.ts = de wedstrijdklok. 100% getest.
+│                  # De klok speelt public/kwart.mp3 (scripts/maak-kwartaudio.mjs) mee, zodat het
+│                  # piepje ook klinkt met het scherm op slot.
 ├── services/db/   # De enige weg naar data. index.ts kiest Supabase of demo-stand (localStorage).
 │                  # subscribeMatch = realtime (Supabase channel / storage-event in de demo).
 ├── data/seed.ts   # Seed-teams voor de demo-stand (gelijk houden met de seed-migration!)

@@ -24,8 +24,16 @@ interface Props {
 }
 
 /**
+ * Eén kwart aan geluid (public/kwart.mp3, zie scripts/maak-kwartaudio.mjs): stilte met een
+ * piep op 5:00 en een dubbele piep op 10:00. De audiospeler van de telefoon houdt de tijd
+ * bij, ook met het scherm op slot — JavaScript-timers worden dan stilgezet, dit niet.
+ */
+const KWART_AUDIO = '/kwart.mp3'
+
+/**
  * Wedstrijdklok per kwart van 10 minuten. Piept en trilt op 5 minuten (wissel) en op 10
- * minuten (einde kwart), en zet het actieve blok mee zodat het veldje klaarstaat.
+ * minuten (einde kwart), en zet het actieve blok mee zodat het veldje klaarstaat. Zolang de
+ * klok loopt blijft het scherm aan (Wake Lock) en loopt het kwart-geluid mee.
  */
 export function MatchClock({ sleutel, vijf, onBlok }: Props) {
   const opslagKey = `klok:${sleutel}`
@@ -34,6 +42,10 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
   const vorigMs = useRef<number>(verstreken(klok, Date.now()))
   const vorigBlok = useRef<number | null>(null)
   const audio = useRef<AudioContext | null>(null)
+  const speler = useRef<HTMLAudioElement>(null)
+  /** Het kwart-geluid kon niet starten (browser blokkeert, bestand mist): dan de piep uit JS. */
+  const geluidFaalt = useRef(false)
+  const wakeLock = useRef<WakeLockSentinel | null>(null)
 
   // Ander team: klokstand van dat team laden.
   useEffect(() => {
@@ -67,10 +79,10 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
     vorigMs.current = ms
     if (!s.length) return
     if (s.includes('einde')) {
-      meld('einde', audio.current)
+      meld('einde', geluidFaalt.current ? audio.current : null)
       setKlok((k) => pauzeer(k, Date.now()))
     } else {
-      meld('wissel', audio.current)
+      meld('wissel', geluidFaalt.current ? audio.current : null)
     }
   }, [ms])
 
@@ -80,6 +92,49 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
     vorigBlok.current = blok
     onBlok(blok)
   }, [blok, onBlok])
+
+  // Kwart-geluid en scherm-aan volgen de klok: aan bij lopen, uit bij pauze/einde.
+  useEffect(() => {
+    const el = speler.current
+    if (!klok.loopt) {
+      el?.pause()
+      wakeLock.current?.release().catch(() => {})
+      wakeLock.current = null
+      return
+    }
+    const sync = () => {
+      const el = speler.current
+      if (!el || !klok.loopt) return
+      const doel = verstreken(klok, Date.now()) / 1000
+      if (Math.abs(el.currentTime - doel) > 1.5) el.currentTime = doel
+      if (el.paused && doel < KWART_MS / 1000) {
+        el.play().catch(() => {
+          geluidFaalt.current = true
+        })
+      }
+    }
+    const houdWakker = () => {
+      if (document.visibilityState !== 'visible' || wakeLock.current) return
+      navigator.wakeLock
+        ?.request('screen')
+        .then((lock) => {
+          wakeLock.current = lock
+          lock.addEventListener('release', () => {
+            if (wakeLock.current === lock) wakeLock.current = null
+          })
+        })
+        .catch(() => {})
+    }
+    const terug = () => {
+      if (document.visibilityState !== 'visible') return
+      sync()
+      houdWakker()
+    }
+    sync()
+    houdWakker()
+    document.addEventListener('visibilitychange', terug)
+    return () => document.removeEventListener('visibilitychange', terug)
+  }, [klok])
 
   const zetKlok = useCallback((f: (k: Klok) => Klok) => {
     const t = Date.now()
@@ -93,7 +148,16 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
   const totEinde = KWART_MS - ms
 
   const doeStart = () => {
-    // AudioContext mag alleen na een tik van de gebruiker; daarom hier.
+    // Geluid mag alleen na een tik van de gebruiker; daarom hier, vóór de state-update.
+    const el = speler.current
+    if (el) {
+      el.currentTime = ms / 1000
+      el.play().catch(() => {
+        geluidFaalt.current = true
+      })
+    } else {
+      geluidFaalt.current = true
+    }
     if (!audio.current && 'AudioContext' in window) audio.current = new AudioContext()
     audio.current?.resume().catch(() => {})
     zetKlok((k) => start(k, Date.now()))
@@ -101,6 +165,7 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
 
   return (
     <div className="card no-print flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
+      <audio ref={speler} src={KWART_AUDIO} preload="auto" playsInline aria-hidden="true" data-testid="kwart-geluid" />
       <div className="flex flex-1 items-center gap-4">
         <span
           className={`font-display text-[44px] leading-none font-bold tabular-nums ${klaar ? 'text-voor' : ''}`}
@@ -150,6 +215,12 @@ export function MatchClock({ sleutel, vijf, onBlok }: Props) {
           </button>
         )}
       </div>
+      {klok.loopt && (
+        <p className="hint basis-full">
+          Het piepje komt uit de audiospeler en klinkt ook met het scherm op slot; zet het geluid van je
+          telefoon aan.
+        </p>
+      )}
     </div>
   )
 }
@@ -172,7 +243,10 @@ function lees(key: string): Klok {
   return nieuweKlok()
 }
 
-/** Piep (twee tonen bij het einde) en tril, voor zover de telefoon dat toelaat. */
+/**
+ * Tril, en piep uit JS als het kwart-geluid niet loopt (`ctx` null = het geluid loopt wel).
+ * Trillen kan alleen als de pagina in beeld is; het geluid is daarom de hoofdzaak.
+ */
 function meld(s: Signaal, ctx: AudioContext | null) {
   try {
     navigator.vibrate?.(s === 'einde' ? [300, 150, 300, 150, 300] : [250, 100, 250])
