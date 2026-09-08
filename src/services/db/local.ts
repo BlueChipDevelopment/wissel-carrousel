@@ -19,7 +19,9 @@ function lees(): Store {
     if (raw) {
       const v = JSON.parse(raw) as Partial<Store>
       if (Array.isArray(v.players) && Array.isArray(v.matches)) {
-        return { players: v.players, matches: v.matches }
+        // Oudere opslag zonder keepers/live: aanvullen.
+        const matches = v.matches.map((m) => ({ ...m, keepers: m.keepers ?? [], live: m.live ?? null }))
+        return { players: v.players, matches }
       }
     }
   } catch {
@@ -116,6 +118,18 @@ export function createLocalSource(): DataSource {
       store = { ...store, matches: store.matches.filter((x) => x.id !== id) }
       schrijf(store)
       return wacht(undefined)
+    },
+
+    // Demo-stand: andere tabbladen van dezelfde browser horen het via het storage-event.
+    subscribeMatch(teamId, date, cb) {
+      const handler = (e: StorageEvent) => {
+        if (e.key !== KEY) return
+        store = lees()
+        const m = store.matches.find((x) => x.teamId === teamId && x.date === date)
+        cb(m ? { ...m } : null)
+      }
+      window.addEventListener('storage', handler)
+      return () => window.removeEventListener('storage', handler)
     },
   }
 }

@@ -48,10 +48,10 @@ export function ScheduleTable({ blokken, opstelling, naam }: Props) {
               </div>
               <div className="mt-[6px] grid grid-cols-2 gap-x-3 text-[13.5px] text-muted">
                 <span>
-                  <span className="text-achter">achter</span> {b.verdedigers.map(naam).join(', ')}
+                  <span className="text-achter">achter</span> {b.verdedigers.filter(Boolean).map(naam).join(', ')}
                 </span>
                 <span>
-                  <span className="text-voor">voor</span> {b.aanval.map(naam).join(', ')}
+                  <span className="text-voor">voor</span> {b.aanval.filter(Boolean).map(naam).join(', ')}
                 </span>
                 <span className="col-span-2">bank {b.bank.length ? b.bank.map(naam).join(', ') : '–'}</span>
               </div>
@@ -84,8 +84,8 @@ export function ScheduleTable({ blokken, opstelling, naam }: Props) {
                     </small>
                   </td>
                   <td className={td}>{b.keeper ? naam(b.keeper) : '–'}</td>
-                  <td className={td}>{b.verdedigers.map(naam).join(', ')}</td>
-                  <td className={td}>{b.aanval.map(naam).join(', ')}</td>
+                  <td className={td}>{b.verdedigers.filter(Boolean).map(naam).join(', ')}</td>
+                  <td className={td}>{b.aanval.filter(Boolean).map(naam).join(', ')}</td>
                   <td className={`${td} text-muted`}>{b.bank.length ? b.bank.map(naam).join(', ') : '–'}</td>
                   <td className={`${td} text-muted`}>
                     {i === 0 ? (

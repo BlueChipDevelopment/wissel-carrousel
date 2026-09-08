@@ -19,14 +19,14 @@ export function RolesPanel({ blokken, i, opstelling, naam }: Props) {
         {b.keeper ? <Chip kleur="keeper">{naam(b.keeper)}</Chip> : <Chip>–</Chip>}
       </Rij>
       <Rij label="Verdedigers">
-        {b.verdedigers.map((p) => (
+        {b.verdedigers.filter(Boolean).map((p) => (
           <Chip key={p} kleur="achter">
             {naam(p)}
           </Chip>
         ))}
       </Rij>
       <Rij label="Voorin">
-        {b.aanval.map((p) => (
+        {b.aanval.filter(Boolean).map((p) => (
           <Chip key={p} kleur="voor">
             {naam(p)}
           </Chip>

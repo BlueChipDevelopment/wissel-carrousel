@@ -48,3 +48,43 @@ export interface Wissel {
   /** true: de oude keeper schuift naar deze veldplek */
   vanGoal?: boolean
 }
+
+/** Werkelijke bezetting van één blok, zoals gespeeld of zoals nu voorzien. */
+export interface LiveBlok {
+  keeper: string | null
+  /** vaste plekken [links, rechts]; '' = leeg */
+  verdedigers: string[]
+  /** vaste plekken volgens de formatie; '' = leeg */
+  aanval: string[]
+  bank: string[]
+}
+
+/** Beschikbaar in de blokken [vanaf, tot). Ontbreekt = de hele wedstrijd. */
+export interface Beschikbaarheid {
+  vanaf?: number
+  tot?: number
+}
+
+/**
+ * De werkelijkheid naast het plan: wat er per blok echt gebeurt (blokken vóór `huidig`
+ * zijn vastgelegd), wie er uitvalt of later komt, en welke blokken de coach zelf gezet heeft.
+ */
+export interface Live {
+  /** Index van het blok dat nu bezig is; alles ervoor is historie. */
+  huidig: number
+  blokken: LiveBlok[]
+  /** Blokindices die de coach met de hand heeft gezet; blijven staan bij herberekenen. */
+  handmatig: number[]
+  beschikbaarheid: Record<string, Beschikbaarheid>
+}
+
+/** Waar een speler naartoe gesleept wordt. */
+export type Doel = { soort: 'goal' } | { soort: 'veld'; i: number } | { soort: 'bank' }
+
+/** Eén verschil tussen twee schema's: speler `speler` stond in blok `blok` op `van`, nu op `naar`. */
+export interface Verschil {
+  blok: number
+  speler: string
+  van: string
+  naar: string
+}

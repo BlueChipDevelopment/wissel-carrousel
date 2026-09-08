@@ -16,7 +16,10 @@ eenmalig, daarna deployt elke push naar `main` automatisch.
    npm run db:push
    ```
 
-   Dit draait de drie migrations: schema, open RLS, en de seed met de vier JO8-teams.
+   Dit draait de migrations: schema, open RLS, de seed met de vier JO8-teams, en de
+   live-stand (`matches.live`, `matches.keepers`, realtime op `matches`). Realtime moet
+   in het project aanstaan (*Database → Publications → supabase_realtime*); de migration
+   voegt `matches` aan die publicatie toe.
 3. Haal uit *Project Settings → API* de **Project URL** en de **anon/publishable key**.
 4. Zet ze lokaal in `.env.local` (git-ignored):
 

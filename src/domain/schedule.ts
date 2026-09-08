@@ -232,14 +232,14 @@ export const FORMATIES: { value: Formatie; label: string }[] = [
 ]
 
 /**
- * Keeperbeurten per speler uit eerder opgeslagen opstellingen: van elke wedstrijd tellen
- * de eerste vier van `achter` (de keepers van kwart 1 t/m 4). Geef alleen gespeelde
- * wedstrijden mee (datum <= vandaag).
+ * Keeperbeurten per speler uit eerder opgeslagen wedstrijden: per wedstrijd de lijst keepers
+ * (`keepersVan()` in live.ts: de werkelijke keepers, of anders de eerste vier van `achter`).
+ * Geef alleen gespeelde wedstrijden mee (datum <= vandaag).
  */
-export function keeperTally(achterLijsten: string[][]): Record<string, number> {
+export function keeperTally(keeperLijsten: string[][]): Record<string, number> {
   const t: Record<string, number> = {}
-  for (const achter of achterLijsten) {
-    for (const p of achter.slice(0, AANTAL_KWARTEN)) t[p] = (t[p] ?? 0) + 1
+  for (const keepers of keeperLijsten) {
+    for (const p of keepers) t[p] = (t[p] ?? 0) + 1
   }
   return t
 }

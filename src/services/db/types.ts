@@ -1,4 +1,4 @@
-import type { Formatie, WisselStand } from '@/domain/types'
+import type { Formatie, Live, WisselStand } from '@/domain/types'
 
 export interface Team {
   id: string
@@ -31,11 +31,18 @@ export interface Match {
   /** speler-ids in opstellingsvolgorde */
   voor: string[]
   afwezig: string[]
+  /** Werkelijke keepers (per kwart, soms twee); leeg bij wedstrijden van vóór de live-stand. */
+  keepers: string[]
+  /** Werkelijkheid tijdens de wedstrijd; null zolang alles volgens plan is. */
+  live: Live | null
   notes: string | null
   updatedAt: string
 }
 
 export type MatchInput = Omit<Match, 'id' | 'updatedAt'> & { id?: string }
+
+/** Loskoppelen van een abonnement. */
+export type Unsubscribe = () => void
 
 /**
  * Alle datatoegang loopt via deze interface (src/services/db/index.ts kiest de
@@ -53,4 +60,9 @@ export interface DataSource {
   /** Upsert op (team, datum). */
   saveMatch(input: MatchInput): Promise<Match>
   deleteMatch(id: string): Promise<void>
+  /**
+   * Meldt elke wijziging aan de wedstrijd van dit team op deze datum door een andere
+   * telefoon (null = verwijderd). Last-write-wins: de ontvanger vergelijkt `updatedAt`.
+   */
+  subscribeMatch(teamId: string, date: string, cb: (m: Match | null) => void): Unsubscribe
 }

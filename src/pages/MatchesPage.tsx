@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTeam } from '@/App'
+import { keepersVan } from '@/domain/live'
 import { keeperTally } from '@/domain/schedule'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDate, todayISO } from '@/utils/dateUtils'
@@ -32,7 +33,7 @@ export function MatchesPage() {
   const naam = (id: string) => spelers.find((p) => p.id === id)?.name ?? '?'
   const vandaag = todayISO()
   const gespeeld = useMemo(() => matches.filter((m) => m.date <= vandaag), [matches, vandaag])
-  const tally = useMemo(() => keeperTally(gespeeld.map((m) => m.achter)), [gespeeld])
+  const tally = useMemo(() => keeperTally(gespeeld.map(keepersVan)), [gespeeld])
 
   const verwijder = async (m: Match) => {
     if (!window.confirm(`Wedstrijd van ${formatDate(m.date)} verwijderen?`)) return
@@ -88,7 +89,7 @@ export function MatchesPage() {
                 <tr className="border-b border-line">
                   <Th>Datum</Th>
                   <Th>Tegenstander</Th>
-                  <Th>Keepers K1–K4</Th>
+                  <Th>Keepers</Th>
                   <Th>Afwezig</Th>
                   <Th>Stand</Th>
                   <Th> </Th>
@@ -104,7 +105,10 @@ export function MatchesPage() {
                       {m.date > vandaag && <small className="ml-2 text-muted">gepland</small>}
                     </Td>
                     <Td>{m.opponent ?? '–'}</Td>
-                    <Td>{m.achter.slice(0, 4).map(naam).join(' · ')}</Td>
+                    <Td>
+                      {keepersVan(m).map(naam).join(' · ')}
+                      {m.live && <small className="ml-2 text-muted">live</small>}
+                    </Td>
                     <Td muted>{m.afwezig.length ? m.afwezig.map(naam).join(', ') : '–'}</Td>
                     <Td muted>{m.wissel === '5min' ? '5 min' : 'kwart'} · {m.formatie}</Td>
                     <Td>

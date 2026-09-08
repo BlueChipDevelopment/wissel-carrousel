@@ -42,12 +42,52 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 4. Per blok: veldje, rollen, bank met bestemming, en "wie voor wie" bij de start van dat blok.
 5. Hele wedstrijd in één tabel + speelminuten per speler.
 6. **Opslaan** → de wedstrijd telt vanaf de wedstrijddag mee in de keeperbeurten.
+6a. **Langs de lijn**: klok starten, slepen op het veld, uitvallers en laatkomers aangeven;
+    de rest rekent mee en staat meteen op de telefoon van de andere coach (zie "Live").
 7. Wedstrijden & keeperbeurten: geschiedenis per team, teller per speler, wedstrijd verwijderen.
 8. Spelers: toevoegen, hernoemen, uit de selectie halen (geschiedenis blijft).
+
+## Live tijdens de wedstrijd (v1.1)
+
+Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast houdt de app de
+**werkelijkheid** bij (`Live` in `src/domain/live.ts`, opgeslagen in `matches.live`):
+
+- **Vastgelegd en aanpasbaar.** Het blok dat bezig is (`huidig`) schuift mee met de klok op de
+  wedstrijddag, of met ‹ › in de live-balk. Blokken ervoor zijn historie en niet meer te
+  wijzigen; het huidige en de komende blokken wel.
+- **Slepen op het veld.** Speler van de bank naar een plek, twee plekken ruilen, iemand op goal,
+  of naar de bank. Werkt met pointer events (ook op de telefoon). Het blok wordt dan
+  *handmatig* en blijft staan bij latere herberekeningen.
+- **Uitvallen en later komen.** Per speler een venster "valt uit vanaf …" of "komt vanaf …".
+  Een speler die volgens het plan afwezig was en toch komt, gaat achteraan in de kortste linie
+  (dus zonder keeperbeurt).
+- **Herberekenen** van alleen de resterende, niet-handmatige blokken, met zo min mogelijk
+  verandering ten opzichte van het plan:
+  1. keeper per kwart: binnen een kwart blijft de keeper (tenzij uitgevallen); een nieuw kwart
+     krijgt de eerste uit `achter` die deze wedstrijd nog niet gekeept heeft, anders wie het
+     minst gekeept heeft;
+  2. bank per blok: het plan minus wie er niet is; te veel op de bank → wie het minst speelt
+     gaat spelen, te weinig → wie (naar verwachting) het meest speelt gaat zitten. Niemand zit
+     twee blokken achter elkaar en in de 5-minutenstand niemand vlak vóór of ná zijn keepersbeurt;
+  3. eerlijk maken: zolang speler X meer dan één blok voorligt op speler Y, ruilen ze in het
+     eerste blok waar Y zit en X speelt (als de regels hierboven dat toelaten). Zo komt met
+     7 spelers iedereen op 30 of 35 uit, ook over de linies heen;
+  4. plekken: wie erin komt neemt de plek over van wie eruit gaat, bij voorkeur in de eigen linie.
+  Zonder wijzigingen komt hier bij 8 spelers precies het plan uit (getest).
+- **Dit verandert.** Na elke actie staat er per blok wie van plek verandert; met **Ongedaan**
+  zet je de laatste wijziging terug (ook een uitvaller of een planwijziging tijdens de wedstrijd).
+- **Tellen uit de werkelijkheid.** Speeltijd en keeperbeurten komen uit de werkelijke blokken.
+  Per kwart telt elke keeper één beurt (bij een keeperswissel halverwege dus twee). De app
+  schrijft ze in `matches.keepers`; oudere wedstrijden vallen terug op `achter[0..3]`.
+- **Beide coaches zien hetzelfde.** Elke live-actie wordt direct opgeslagen en via Supabase
+  realtime naar de andere telefoons gestuurd; de nieuwste `updated_at` wint. Staan er op een
+  telefoon nog niet-opgeslagen planwijzigingen, dan krijgt die een melding met "Die versie
+  ophalen". Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op.
+- Wissel je van bankstand (5 min ↔ kwart) terwijl er een live-stand is, dan begint die opnieuw.
 
 ## Buiten scope v1
 
 - Login / rechten (zie ADR-0001 voor het upgradepad).
 - Offline schrijven (de app-shell werkt offline; data heeft netwerk nodig).
 - Meerdere clubs, seizoenswissel (teams worden via migrations/SQL beheerd).
-- Timer langs de lijn.
+- Rechten op wie live mag aanpassen (iedereen met de link kan dat, zoals alles).

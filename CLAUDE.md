@@ -41,13 +41,17 @@ npm run db:types    # database.ts opnieuw genereren na een schemawijziging
 
 ```
 src/
-├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart, klok.ts = de
-│                  # wedstrijdklok (kwart van 10 min, wisselsignaal op 5). 100% getest.
+├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart (het plan),
+│                  # live.ts = de werkelijkheid tijdens de wedstrijd (herberekenen, slepen,
+│                  # uitvallers, tellen), klok.ts = de wedstrijdklok. 100% getest.
 ├── services/db/   # De enige weg naar data. index.ts kiest Supabase of demo-stand (localStorage).
+│                  # subscribeMatch = realtime (Supabase channel / storage-event in de demo).
 ├── data/seed.ts   # Seed-teams voor de demo-stand (gelijk houden met de seed-migration!)
-├── components/    # Pitch, BlockTabs, RolesPanel, ScheduleTable (tabel op desktop, kaartjes op
-│                  # mobiel), MatchClock (klok; zet het actieve blok mee), MinutesList (speeltijd,
-│                  # onderaan), LineupEditor, TeamNav
+├── components/    # Pitch (veldje, sleepbaar met pointer events, bank eronder), BlockTabs,
+│                  # LivePanel (blok bezig, undo, "dit verandert", uitvallers), RolesPanel,
+│                  # ScheduleTable (tabel op desktop, kaartjes op mobiel), MatchClock (klok; zet
+│                  # het actieve én op de wedstrijddag het huidige blok mee), MinutesList,
+│                  # LineupEditor, TeamNav
 ├── pages/         # TeamPage (opstelling), MatchesPage (geschiedenis), PlayersPage
 ├── hooks/         # useTeams
 ├── utils/         # dateUtils — datums altijd YYYY-MM-DD, nooit new Date('YYYY-MM-DD')
@@ -73,8 +77,17 @@ opstelling voorin (linksvoor, spits, rechtsvoor, daarna de wissel). Wie erin kom
 over van wie eruit gaat (`vulSlots`). In de 5-minutenstand met 4 achterin bepaalt `BANK4` wie
 wanneer op de bank zit, zó dat niemand op de bank zit direct vóór of ná zijn keepersbeurt,
 niemand twee blokjes achter elkaar zit, en iedereen op 30 minuten uitkomt. Keeperbeurten worden
-niet apart bijgehouden maar afgeleid uit `matches.achter[0..3]` van gespeelde wedstrijden
-(`keeperTally`, en de view `keeper_counts`).
+niet apart bijgehouden maar afgeleid uit de werkelijke keepers (`matches.keepers`, door de app
+geschreven uit de live-stand; oude wedstrijden: `achter[0..3]`) van gespeelde wedstrijden
+(`keeperTally` met `keepersVan`, en de view `keeper_counts`).
+
+**Live** (`live.ts`): het plan blijft het anker; `Live` = huidig blok (alles ervoor ligt vast),
+werkelijke bezetting per blok, handmatig gezette blokken en beschikbaarheid per speler.
+`herbereken()` bepaalt alleen de resterende, niet-handmatige blokken opnieuw: keeper per kwart,
+bank per blok (plan minus wie er niet is), dan ruilen tot niemand meer dan één blok voorligt,
+dan plekken via `vulSlots`. Zonder wijzigingen komt er bij 8 spelers precies het plan uit. De
+UI toont altijd `samengesteld(plan, live ?? nieuwLive(plan))`. Live-acties slaan direct op
+(debounce) en gaan via realtime naar de andere telefoons; last-write-wins op `updated_at`.
 
 ## Toegang (belangrijk)
 

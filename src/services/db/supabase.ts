@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
-import type { Formatie, WisselStand } from '@/domain/types'
+import type { Formatie, Live, WisselStand } from '@/domain/types'
 import type { DataSource, Match, MatchInput, Player, Team } from './types'
+import type { Json } from '@/types/database'
 
 type Row<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 
@@ -24,8 +25,23 @@ function toMatch(r: Row<'matches'>): Match {
     achter: r.achter ?? [],
     voor: r.voor ?? [],
     afwezig: r.afwezig ?? [],
+    keepers: r.keepers ?? [],
+    live: leesLive(r.live),
     notes: r.notes,
     updatedAt: r.updated_at,
+  }
+}
+
+/** jsonb → Live, met een minimale vormcontrole; iets onbekends telt als "geen live-stand". */
+function leesLive(v: unknown): Live | null {
+  if (!v || typeof v !== 'object') return null
+  const l = v as Partial<Live>
+  if (typeof l.huidig !== 'number' || !Array.isArray(l.blokken)) return null
+  return {
+    huidig: l.huidig,
+    blokken: l.blokken,
+    handmatig: Array.isArray(l.handmatig) ? l.handmatig : [],
+    beschikbaarheid: l.beschikbaarheid && typeof l.beschikbaarheid === 'object' ? l.beschikbaarheid : {},
   }
 }
 
@@ -119,6 +135,8 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
         achter: input.achter,
         voor: input.voor,
         afwezig: input.afwezig,
+        keepers: input.keepers,
+        live: (input.live as unknown as Json) ?? null,
         notes: input.notes,
       }
       const { data, error } = await sb
@@ -133,6 +151,29 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
     async deleteMatch(id) {
       const { error } = await sb.from('matches').delete().eq('id', id)
       if (error) fail('wedstrijd verwijderen', error)
+    },
+
+    subscribeMatch(teamId, date, cb) {
+      // Eén filterkolom per channel; de datum checken we zelf.
+      const channel = sb
+        .channel(`matches:${teamId}:${date}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'matches', filter: `team_id=eq.${teamId}` },
+          (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const oud = payload.old as Partial<Row<'matches'>>
+              if (oud.match_date === date || oud.match_date === undefined) cb(null)
+              return
+            }
+            const r = payload.new as Row<'matches'>
+            if (r.match_date === date) cb(toMatch(r))
+          },
+        )
+        .subscribe()
+      return () => {
+        void sb.removeChannel(channel)
+      }
     },
   }
 }

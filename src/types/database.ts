@@ -21,6 +21,8 @@ export type Database = {
           created_at: string
           formatie: string
           id: string
+          keepers: string[]
+          live: Json | null
           match_date: string
           notes: string | null
           opponent: string | null
@@ -35,6 +37,8 @@ export type Database = {
           created_at?: string
           formatie?: string
           id?: string
+          keepers?: string[]
+          live?: Json | null
           match_date: string
           notes?: string | null
           opponent?: string | null
@@ -49,6 +53,8 @@ export type Database = {
           created_at?: string
           formatie?: string
           id?: string
+          keepers?: string[]
+          live?: Json | null
           match_date?: string
           notes?: string | null
           opponent?: string | null
