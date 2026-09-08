@@ -8,6 +8,7 @@ import {
   positieNamen,
   minuten,
   standaardVerdeling,
+  toggleAanwezig,
   vulSlots,
   waarschuwing,
   wisselParen,
@@ -195,5 +196,17 @@ describe('formaties', () => {
     const a = blokken(JO8)
     const b = blokken({ ...JO8, formatie: '1-2-2-1' })
     expect(b).toEqual(a)
+  })
+})
+
+describe('toggleAanwezig', () => {
+  it('haalt een speler uit zijn linie en zet hem terug in de kortste, achteraan', () => {
+    const weg = toggleAanwezig(JO8, [], 'Sara')
+    expect(weg.achter).toEqual(['Mees', 'Christopher', 'Floris'])
+    expect(weg.voor).toEqual(JO8.voor)
+    expect(weg.afwezig).toEqual(['Sara'])
+    const terug = toggleAanwezig(weg, weg.afwezig, 'Sara')
+    expect(terug.achter).toEqual(['Mees', 'Christopher', 'Floris', 'Sara'])
+    expect(terug.afwezig).toEqual([])
   })
 })

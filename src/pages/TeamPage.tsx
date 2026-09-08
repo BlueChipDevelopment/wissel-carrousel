@@ -22,7 +22,8 @@ import {
   zetHuidig,
   zetOpPlek,
 } from '@/domain/live'
-import { hussel, keeperTally, minuten, standaardVerdeling } from '@/domain/schedule'
+import { AttendancePanel } from '@/components/AttendancePanel'
+import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig } from '@/domain/schedule'
 import type { Beschikbaarheid, Doel, Live, Opstelling, Verschil } from '@/domain/types'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDateShort, nextSaturdayISO, todayISO } from '@/utils/dateUtils'
@@ -278,11 +279,9 @@ export function TeamPage() {
     const inLinie = opstelling.achter.includes(speler) || opstelling.voor.includes(speler)
     if (!inLinie) {
       // Stond op afwezig: in de kortste linie erbij, achteraan (dus geen keeperbeurt).
-      const naarAchter = opstelling.achter.length <= opstelling.voor.length
-      opstelling = naarAchter
-        ? { ...opstelling, achter: [...opstelling.achter, speler] }
-        : { ...opstelling, voor: [...opstelling.voor, speler] }
-      afwezig = afwezig.filter((x) => x !== speler)
+      const t = toggleAanwezig(opstelling, afwezig, speler)
+      opstelling = { ...opstelling, achter: t.achter, voor: t.voor }
+      afwezig = t.afwezig
     }
     const label =
       b.tot !== undefined ? `${naam(speler)} valt uit` : b.vanaf !== undefined ? `${naam(speler)} komt erbij` : `${naam(speler)} hele wedstrijd`
@@ -406,6 +405,17 @@ export function TeamPage() {
           </div>
         )}
       </section>
+
+      {/* Wie is er? Prominent vóór de aftrap, één regel zodra de wedstrijd loopt. */}
+      <AttendancePanel
+        spelers={spelers}
+        afwezig={draft.afwezig}
+        compact={live.huidig > 0}
+        onToggle={(id) => {
+          const t = toggleAanwezig(draft.opstelling, draft.afwezig, id)
+          wijzigPlan({ ...draft.opstelling, achter: t.achter, voor: t.voor }, t.afwezig)
+        }}
+      />
 
       {kanTonen ? (
         <>

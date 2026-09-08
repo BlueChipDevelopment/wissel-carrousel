@@ -189,6 +189,30 @@ export function hussel(
   return { achter: pool.slice(0, half), voor: pool.slice(half) }
 }
 
+/**
+ * Speler op afwezig zetten (uit beide linies) of weer aanwezig maken (achteraan in de kortste
+ * linie, dus zonder keeperbeurt).
+ */
+export function toggleAanwezig(
+  opstelling: Pick<Opstelling, 'achter' | 'voor'>,
+  afwezig: string[],
+  id: string,
+): { achter: string[]; voor: string[]; afwezig: string[] } {
+  if (afwezig.includes(id)) {
+    const naarAchter = opstelling.achter.length <= opstelling.voor.length
+    return {
+      achter: naarAchter ? [...opstelling.achter, id] : opstelling.achter,
+      voor: naarAchter ? opstelling.voor : [...opstelling.voor, id],
+      afwezig: afwezig.filter((x) => x !== id),
+    }
+  }
+  return {
+    achter: opstelling.achter.filter((x) => x !== id),
+    voor: opstelling.voor.filter((x) => x !== id),
+    afwezig: [...afwezig, id],
+  }
+}
+
 /** Standaardverdeling voor een lijst spelers: eerste (max) 4 achterin, rest voorin. */
 export function standaardVerdeling(spelers: string[]): Pick<Opstelling, 'achter' | 'voor'> {
   const n = Math.max(1, Math.min(4, spelers.length - 3))

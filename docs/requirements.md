@@ -38,7 +38,7 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 1. Team kiezen (JO8-1 … JO8-4).
 2. Wedstrijddatum (standaard de eerstvolgende opgeslagen wedstrijd, anders komende zaterdag);
    tegenstander optioneel.
-3. Aanwezigheid aantikken; linies ordenen; wisselstand en formatie kiezen; eventueel husselen.
+3. Aanwezigheid aantikken (direct onder de wedstrijdkop; tijdens de wedstrijd één regel); linies ordenen; wisselstand en formatie kiezen; eventueel husselen.
 4. Per blok: veldje, rollen, bank met bestemming, en "wie voor wie" bij de start van dat blok.
 5. Hele wedstrijd in één tabel + speelminuten per speler.
 6. **Opslaan** → de wedstrijd telt vanaf de wedstrijddag mee in de keeperbeurten.

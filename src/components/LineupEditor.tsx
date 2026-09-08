@@ -5,6 +5,7 @@ import type { Player } from '@/services/db'
 interface Props {
   spelers: Player[]
   opstelling: Opstelling
+  /** Alleen doorgegeven: aanwezigheid regel je in AttendancePanel. */
   afwezig: string[]
   onChange: (next: { opstelling: Opstelling; afwezig: string[] }) => void
   onHussel: () => void
@@ -22,21 +23,6 @@ export function LineupEditor({ spelers, opstelling, afwezig, onChange, onHussel 
   const zet = (patch: Partial<Opstelling>, nieuwAfwezig = afwezig) =>
     onChange({ opstelling: { ...opstelling, ...patch }, afwezig: nieuwAfwezig })
 
-  const toggleAanwezig = (id: string) => {
-    if (afwezig.includes(id)) {
-      const naarAchter = opstelling.achter.length <= opstelling.voor.length
-      zet(
-        naarAchter ? { achter: [...opstelling.achter, id] } : { voor: [...opstelling.voor, id] },
-        afwezig.filter((x) => x !== id),
-      )
-    } else {
-      zet(
-        { achter: opstelling.achter.filter((x) => x !== id), voor: opstelling.voor.filter((x) => x !== id) },
-        [...afwezig, id],
-      )
-    }
-  }
-
   const verschuif = (g: 'achter' | 'voor', idx: number, delta: number) => {
     const arr = [...opstelling[g]]
     const j = idx + delta
@@ -53,35 +39,11 @@ export function LineupEditor({ spelers, opstelling, afwezig, onChange, onHussel 
     })
   }
 
-  const actief = spelers.filter((p) => p.active)
-
   return (
     <section className="no-print flex flex-col gap-3">
       <h2 className="text-[23px] font-semibold tracking-[0.03em]">Opstelling instellen</h2>
       <div className="card p-4">
         <div className="grid gap-5 md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          <div>
-            <div className="eyebrow">Wie is er?</div>
-            <div className="mt-[9px] flex flex-wrap gap-[7px]">
-              {actief.map((p) => {
-                const er = !afwezig.includes(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    aria-pressed={er}
-                    onClick={() => toggleAanwezig(p.id)}
-                    className={`chip ${er ? '' : 'opacity-40 line-through'}`}
-                  >
-                    {p.name}
-                  </button>
-                )
-              })}
-              {!actief.length && <span className="hint">Nog geen spelers — voeg ze toe onder Spelers.</span>}
-            </div>
-            <p className="hint mt-2">Tik een naam aan om hem of haar op afwezig te zetten.</p>
-          </div>
-
           <div>
             <div className="eyebrow">Achterin — volgorde = keepervolgorde</div>
             <Lijst

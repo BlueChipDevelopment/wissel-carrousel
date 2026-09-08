@@ -52,7 +52,7 @@ src/
 │                  # subscribeMatch = realtime (Supabase channel / storage-event in de demo).
 ├── data/seed.ts   # Seed-teams voor de demo-stand (gelijk houden met de seed-migration!)
 ├── components/    # Pitch (veldje, sleepbaar met pointer events, bank eronder), BlockTabs,
-│                  # LivePanel (blok bezig, undo, "dit verandert", uitvallers), RolesPanel,
+│                  # LivePanel (blok bezig, undo, "dit verandert", uitvallers), AttendancePanel (wie is er?), RolesPanel,
 │                  # ScheduleTable (tabel op desktop, kaartjes op mobiel), MatchClock (klok; zet
 │                  # het actieve én op de wedstrijddag het huidige blok mee), MinutesList,
 │                  # LineupEditor, TeamNav
