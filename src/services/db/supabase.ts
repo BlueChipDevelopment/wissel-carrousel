@@ -20,7 +20,7 @@ function toMatch(r: Row<'matches'>): Match {
     teamId: r.team_id,
     date: r.match_date,
     opponent: r.opponent,
-    wissel: (r.wissel === 'kwart' ? 'kwart' : '5min') as WisselStand,
+    wissel: (r.wissel === 'kwart' || r.wissel === 'vrij' ? r.wissel : '5min') as WisselStand,
     formatie: (r.formatie === '1-2-1-2' || r.formatie === '1-2-2-1' ? r.formatie : '1-2-3') as Formatie,
     achter: r.achter ?? [],
     voor: r.voor ?? [],

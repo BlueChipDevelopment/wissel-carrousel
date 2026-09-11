@@ -353,3 +353,37 @@ describe('laatLos', () => {
     expect(laatLos(JO8, a, 1)).toBe(a)
   })
 })
+
+describe('vrije wissels in de live-stand', () => {
+  const VRIJ: Opstelling = { ...JO8, wissel: 'vrij' }
+
+  it('past bij 8 blokken en levert zonder wijzigingen het plan op', () => {
+    const live = nieuwLive(VRIJ)
+    expect(past(VRIJ, live)).toBe(true)
+    expect(samengesteld(VRIJ, live)).toEqual(blokken(VRIJ))
+  })
+
+  it('uitvaller: de rest wordt eerlijk verdeeld, keepers naast hun beurt blijven van de bank', () => {
+    const live = zetBeschikbaarheid(VRIJ, zetHuidig(nieuwLive(VRIJ), 1), 'Guus', { tot: 3 })
+    const { sch, dur } = controleer(VRIJ, live)
+    const rest = ALLE.filter((p) => p !== 'Guus')
+    expect(spreiding(sch, rest)).toBeLessThanOrEqual(dur)
+    sch.forEach((b, h) => {
+      for (const p of b.bank) {
+        if (h > 0) expect(sch[h - 1].keeper).not.toBe(p)
+        if (h < 7) expect(sch[h + 1].keeper).not.toBe(p)
+      }
+    })
+  })
+
+  it('wie erin komt neemt de eerste vrije plek, ongeacht linie', () => {
+    const start = zetHuidig(nieuwLive(VRIJ), 2)
+    const zit = start.blokken[3].bank[0]
+    // Iemand die net niet zat, zodat de controle op twee bankbeurten achter elkaar blijft gelden.
+    const i = start.blokken[3].verdedigers.findIndex((p) => !start.blokken[2].bank.includes(p))
+    const staat = start.blokken[3].verdedigers[i]
+    const live = wisselPlek(VRIJ, start, 3, zit, staat)
+    const { sch } = controleer(VRIJ, live)
+    expect(sch[3].verdedigers[i]).toBe(zit)
+  })
+})

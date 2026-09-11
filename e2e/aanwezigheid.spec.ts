@@ -23,3 +23,15 @@ test('afwezig zetten vóór de aftrap, samengevat zodra de wedstrijd loopt', asy
   await paneel.getByRole('button', { name: 'Adam', pressed: false }).click()
   await expect(paneel).toContainText('8 van 8 erbij')
 })
+
+test('vrije wissels: keepers vast, de rest zonder linies, iedereen op 30', async ({ page }) => {
+  await page.goto('/team/jo8-1')
+  await expect(page.getByText('Demo-stand.')).toBeVisible()
+  await page.getByLabel('Bankbeurten').selectOption('vrij')
+  await expect(page.getByText('Keepers — volgorde = wie wanneer keept')).toBeVisible()
+  await expect(page.getByText('De rest — volgorde = opstelling bij de start')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hussel de keepers' })).toBeVisible()
+  const chips = page.locator('section:has-text("Speeltijd") .chip')
+  const minuten = (await chips.allInnerTexts()).map((t) => Number(t.match(/(\d+)'/)?.[1]))
+  expect(minuten).toEqual(Array(8).fill(30))
+})

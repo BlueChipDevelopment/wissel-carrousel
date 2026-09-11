@@ -19,6 +19,8 @@ export function LineupEditor({ spelers, opstelling, afwezig, onChange, onHussel 
   const naam = (id: string) => spelers.find((p) => p.id === id)?.name ?? '?'
   const namen = positieNamen(opstelling.formatie)
   const waarsch = waarschuwing(opstelling)
+  /** Vrije stand: 'achter' zijn alleen de keepers, 'voor' is de rest. */
+  const vrij = opstelling.wissel === 'vrij'
 
   const zet = (patch: Partial<Opstelling>, nieuwAfwezig = afwezig) =>
     onChange({ opstelling: { ...opstelling, ...patch }, afwezig: nieuwAfwezig })
@@ -45,27 +47,30 @@ export function LineupEditor({ spelers, opstelling, afwezig, onChange, onHussel 
       <div className="card p-4">
         <div className="grid gap-5 md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           <div>
-            <div className="eyebrow">Achterin — volgorde = keepervolgorde</div>
+            <div className="eyebrow">{vrij ? 'Keepers — volgorde = wie wanneer keept' : 'Achterin — volgorde = keepervolgorde'}</div>
             <Lijst
               g="achter"
               ids={opstelling.achter}
               naam={naam}
+              vrij={vrij}
               tag={(idx) => (idx < 4 ? `keept K${idx + 1}` : 'reserve')}
               onVerschuif={verschuif}
               onVerplaats={verplaats}
             />
-            <div className="eyebrow mt-4">Voorin — volgorde = opstelling</div>
+            <div className="eyebrow mt-4">{vrij ? 'De rest — volgorde = opstelling bij de start' : 'Voorin — volgorde = opstelling'}</div>
             <Lijst
               g="voor"
               ids={opstelling.voor}
               naam={naam}
-              tag={(idx) => (idx < 3 ? namen.voor[idx] : 'wissel bij start')}
+              vrij={vrij}
+              tag={(idx) => (vrij ? 'speelt overal' : idx < 3 ? namen.voor[idx] : 'wissel bij start')}
               onVerschuif={verschuif}
               onVerplaats={verplaats}
             />
             <p className="hint mt-2">
-              Met ↑ en ↓ verander je de volgorde: achterin bepaalt dat wie wanneer op goal staat, voorin wie
-              linksvoor, spits en rechtsvoor staat. Met de knop rechts schuif je iemand naar de andere linie.
+              {vrij
+                ? 'Met ↑ en ↓ verander je de keepervolgorde. Verder zijn er geen linies: de bank rouleert over iedereen en wie erin komt neemt de plek over van wie eruit gaat.'
+                : 'Met ↑ en ↓ verander je de volgorde: achterin bepaalt dat wie wanneer op goal staat, voorin wie linksvoor, spits en rechtsvoor staat. Met de knop rechts schuif je iemand naar de andere linie.'}
             </p>
           </div>
 
@@ -114,9 +119,9 @@ export function LineupEditor({ spelers, opstelling, afwezig, onChange, onHussel 
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button type="button" className="btn" onClick={onHussel}>
-            Hussel de linies
+            {vrij ? 'Hussel de keepers' : 'Hussel de linies'}
           </button>
-          <span className="hint">Zet wie het langst niet gekeept heeft achterin.</span>
+          <span className="hint">{vrij ? 'Zet wie het langst niet gekeept heeft in de keeperlijst.' : 'Zet wie het langst niet gekeept heeft achterin.'}</span>
         </div>
       </div>
     </section>
@@ -127,6 +132,7 @@ function Lijst({
   g,
   ids,
   naam,
+  vrij,
   tag,
   onVerschuif,
   onVerplaats,
@@ -134,6 +140,7 @@ function Lijst({
   g: 'achter' | 'voor'
   ids: string[]
   naam: (id: string) => string
+  vrij: boolean
   tag: (idx: number) => string
   onVerschuif: (g: 'achter' | 'voor', idx: number, delta: number) => void
   onVerplaats: (id: string, van: 'achter' | 'voor') => void
@@ -166,10 +173,10 @@ function Lijst({
             <button
               type="button"
               className={`${knop} w-auto px-[9px] text-[12.5px]`}
-              aria-label={g === 'achter' ? 'Naar de voorhoede' : 'Naar de verdediging'}
+              aria-label={g === 'achter' ? (vrij ? 'Uit de keeperlijst' : 'Naar de voorhoede') : vrij ? 'Naar de keeperlijst' : 'Naar de verdediging'}
               onClick={() => onVerplaats(id, g)}
             >
-              {g === 'achter' ? '→ voorin' : '→ achterin'}
+              {g === 'achter' ? (vrij ? '→ rest' : '→ voorin') : vrij ? '→ keeper' : '→ achterin'}
             </button>
           </div>
         )

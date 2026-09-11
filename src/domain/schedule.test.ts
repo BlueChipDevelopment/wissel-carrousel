@@ -5,6 +5,7 @@ import {
   blokken,
   hussel,
   keepers,
+  plekVan,
   positieNamen,
   minuten,
   standaardVerdeling,
@@ -208,5 +209,87 @@ describe('toggleAanwezig', () => {
     const terug = toggleAanwezig(weg, weg.afwezig, 'Sara')
     expect(terug.achter).toEqual(['Mees', 'Christopher', 'Floris', 'Sara'])
     expect(terug.afwezig).toEqual([])
+  })
+})
+
+describe('blokken — vrij (keepers vast, bank over iedereen)', () => {
+  const VRIJ: Opstelling = { ...JO8, wissel: 'vrij' }
+  const sch = blokken(VRIJ)
+
+  it('levert 8 blokken van 5 minuten met iedereen op 30', () => {
+    expect(sch).toHaveLength(8)
+    const m = minuten(sch, ALLE)
+    for (const p of ALLE) expect(m[p], p).toBe(30)
+    for (const b of sch) {
+      expect([b.keeper, ...b.verdedigers, ...b.aanval]).toHaveLength(6)
+      expect(b.bank).toHaveLength(2)
+    }
+  })
+
+  it('laat de keepers rouleren zoals gepland', () => {
+    expect(sch.map((b) => b.keeper)).toEqual(['Mees', 'Mees', 'Sara', 'Sara', 'Christopher', 'Christopher', 'Floris', 'Floris'])
+  })
+
+  it('zet de bank ook voor de rest niet twee blokken achter elkaar, en keepers niet naast hun beurt', () => {
+    sch.forEach((b, h) => {
+      if (h > 0) for (const p of b.bank) expect(sch[h - 1].bank, `blok ${h}: ${p}`).not.toContain(p)
+      for (const p of b.bank) {
+        if (h > 0) expect(sch[h - 1].keeper, `blok ${h}: ${p} zit na zijn keeperbeurt`).not.toBe(p)
+        if (h < 7) expect(sch[h + 1].keeper, `blok ${h}: ${p} zit vóór zijn keeperbeurt`).not.toBe(p)
+      }
+    })
+  })
+
+  it('laat iedereen één keer per helft zitten, en wisselt over de linies heen', () => {
+    for (const p of ALLE) {
+      const beurten = bankTijden(sch, p)
+      expect(beurten, p).toHaveLength(2)
+      expect(beurten[0], p).toBeLessThan(20)
+      expect(beurten[1], p).toBeGreaterThanOrEqual(20)
+    }
+    // Iemand uit de "rest" staat ergens als verdediger: de linies zijn los.
+    expect(sch.some((b) => b.verdedigers.some((p) => VRIJ.voor.includes(p)))).toBe(true)
+  })
+
+  it('houdt spelers op hun plek: wie erin komt neemt de plek van wie eruit gaat', () => {
+    for (let h = 1; h < 8; h++) {
+      const v = [...sch[h - 1].verdedigers, ...sch[h - 1].aanval]
+      const n = [...sch[h].verdedigers, ...sch[h].aanval]
+      v.forEach((p, i) => {
+        if (n.includes(p)) expect(n[i], `blok ${h}: ${p}`).toBe(p)
+      })
+    }
+  })
+
+  it('rekent 7 en 9 spelers door zonder dubbele bankbeurten', () => {
+    for (const o of [{ ...VRIJ, voor: VRIJ.voor.slice(0, 3) }, { ...VRIJ, voor: [...VRIJ.voor, 'Noah'] }]) {
+      const s = blokken(o)
+      const alle = [...o.achter, ...o.voor]
+      for (const b of s) {
+        expect([b.keeper, ...b.verdedigers, ...b.aanval].filter(Boolean)).toHaveLength(6)
+        expect(b.bank).toHaveLength(alle.length - 6)
+      }
+      s.forEach((b, h) => {
+        if (h > 0) for (const p of b.bank) expect(s[h - 1].bank).not.toContain(p)
+      })
+      expect(waarschuwing(o)).toMatch(/spelers/)
+    }
+  })
+
+  it('waarschuwt bij een ander aantal keepers dan 4, niet over verdedigers', () => {
+    expect(waarschuwing(VRIJ)).toBeNull()
+    expect(waarschuwing({ ...VRIJ, achter: VRIJ.achter.slice(0, 3), voor: [...VRIJ.voor, 'Floris'] })).toMatch(/keepers/)
+    expect(waarschuwing({ ...VRIJ, achter: VRIJ.achter.slice(0, 2), voor: [...VRIJ.voor, 'Christopher', 'Floris'] })).not.toMatch(/verdediger/)
+  })
+
+  it('wisselParen koppelt de wissel aan wie zijn plek afstaat (binnen een kwart)', () => {
+    for (const h of [1, 3, 5, 7]) {
+      const paren = wisselParen(sch, h, VRIJ)
+      for (const x of paren) {
+        if (x.keeper || x.vanGoal) continue
+        expect(x.eruit, `blok ${h}: ${x.erin}`).toBeTruthy()
+        expect(plekVan(sch[h - 1], x.eruit!, VRIJ.formatie)).toBe(x.plek)
+      }
+    }
   })
 })

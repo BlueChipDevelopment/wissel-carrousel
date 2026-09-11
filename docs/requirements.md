@@ -18,9 +18,14 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
   iedereen daar precies één kwart, ook de wissel.
 - De linies worden **wekelijks gehusseld** door de coach; de app helpt door wie het langst niet
   gekeept heeft achterin te zetten.
-- **Bankbeurten** in twee standen:
+- **Bankbeurten** in drie standen:
   - *elke 5 minuten* (standaard): 8 blokjes; iedereen zit 2 × 5 minuten;
-  - *per kwart*: 4 blokken; iedereen zit 1 × 10 minuten.
+  - *per kwart*: 4 blokken; iedereen zit 1 × 10 minuten;
+  - *vrij, elke 5 minuten*: geen linies. `achter[]` is dan alleen de keeperlijst; de bank
+    rouleert over iedereen (`VRIJ8` bij 8 spelers: één beurt per helft, minstens drie blokjes
+    ertussen, niemand vlak vóór of ná zijn keepersbeurt) en wie erin komt neemt de plek over
+    van wie eruit gaat, ook verdediger ↔ aanvaller. Voor coaches die niet met vaste linies
+    willen werken.
 - **Niet koud worden** (5-minutenstand, 4 achterin): niemand zit op de bank in het blokje
   direct vóór of ná zijn keepersbeurt, want dan sta je 15 minuten achter elkaar stil. Ook zit
   niemand twee blokjes achter elkaar. De tabel `BANK4 = [2,3,2,0,3,1,0,1]` (index in de

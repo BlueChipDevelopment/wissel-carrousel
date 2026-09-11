@@ -5,7 +5,8 @@
  */
 
 /** Wisselritme: bankbeurten per kwart (10 min) of per half kwart (5 min). */
-export type WisselStand = '5min' | 'kwart'
+/** 'vrij': keepers zoals gepland, de bank rouleert over iedereen (elke 5 minuten). */
+export type WisselStand = '5min' | 'kwart' | 'vrij'
 
 /** Opstelling van de drie voorin. De achterhoede is altijd keeper + 2 verdedigers. */
 export type Formatie = '1-2-3' | '1-2-1-2' | '1-2-2-1'

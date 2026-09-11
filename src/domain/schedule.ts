@@ -22,6 +22,28 @@ export const AANTAL_KWARTEN = 4
  */
 export const BANK4 = [2, 3, 2, 0, 3, 1, 0, 1] as const
 
+/**
+ * Bankblokken in de vrije stand bij precies 8 spelers (4 keepers + 4 rest): VRIJ8[blok] = twee
+ * indices in [...achter, ...voor]. Gezocht met een klein zoekprogramma: iedereen zit één keer
+ * per helft met minstens drie blokken ertussen, niemand twee blokken achter elkaar, en een
+ * keeper nooit vlak vóór, tijdens of ná zijn beurt. De test bewaakt die eigenschappen.
+ */
+export const VRIJ8 = [
+  [1, 2],
+  [3, 4],
+  [5, 6],
+  [0, 7],
+  [3, 4],
+  [1, 5],
+  [0, 6],
+  [2, 7],
+] as const
+
+/** Blokken van 5 minuten (8 per wedstrijd)? Anders per kwart. */
+export function vijfMinuten(wissel: WisselStand): boolean {
+  return wissel !== 'kwart'
+}
+
 export interface PositieNamen {
   achter: string[]
   voor: string[]
@@ -58,6 +80,7 @@ export function vulSlots(vorig: (string | null)[], nieuw: string[]): string[] {
  * Werkt ook met 7 of 9 spelers; dan zijn de bankbeurten niet meer precies gelijk.
  */
 export function blokken(opstelling: Opstelling): Blok[] {
+  if (opstelling.wissel === 'vrij') return blokkenVrij(opstelling)
   const achter = opstelling.achter
   const voor = opstelling.voor
   const B = achter.length
@@ -106,6 +129,57 @@ export function blokken(opstelling: Opstelling): Blok[] {
       verdedigers: [...vorigeAchter],
       aanval: [...vorigeVoor],
       bank: [...bBench, ...fBench],
+    })
+  }
+  return out
+}
+
+/**
+ * Vrije stand: `achter` zijn de keepers (in volgorde), verder is er geen linie. De bank
+ * rouleert over iedereen (VRIJ8 bij 8 spelers, anders gretig: wie het minst zat en niet net
+ * zat, liefst niet naast zijn keeperbeurt) en wie erin komt neemt de plek van wie eruit gaat,
+ * ook over verdediger/aanvaller heen.
+ */
+function blokkenVrij(opstelling: Opstelling): Blok[] {
+  const keepers = opstelling.achter
+  const spelers = [...opstelling.achter, ...opstelling.voor]
+  const K = keepers.length
+  const n = 8
+  const dur = 5
+  const keeperVan = (h: number) => (K && h >= 0 && h < n ? keepers[Math.floor(h / 2) % K] : null)
+  const need = Math.max(0, spelers.length - 6)
+  const gezeten: Record<string, number> = {}
+  const out: Blok[] = []
+  let vorigVeld: string[] = []
+
+  for (let h = 0; h < n; h++) {
+    const keeper = keeperVan(h)
+    let bank: string[]
+    if (spelers.length === 8 && K === 4) {
+      bank = VRIJ8[h].map((i) => spelers[i])
+    } else {
+      const vorige = out[h - 1]?.bank ?? []
+      const kandidaten = spelers.filter((p) => p !== keeper && !vorige.includes(p))
+      const opVolgorde = (l: string[]) =>
+        l.slice().sort((a, b) => (gezeten[a] ?? 0) - (gezeten[b] ?? 0) || spelers.indexOf(a) - spelers.indexOf(b))
+      const naastBeurt = (p: string) => keeperVan(h - 1) === p || keeperVan(h + 1) === p
+      bank = opVolgorde(kandidaten.filter((p) => !naastBeurt(p))).slice(0, need)
+      if (bank.length < need) bank.push(...opVolgorde(kandidaten.filter((p) => !bank.includes(p))).slice(0, need - bank.length))
+    }
+    for (const p of bank) gezeten[p] = (gezeten[p] ?? 0) + 1
+
+    const veld = spelers.filter((p) => p !== keeper && !bank.includes(p))
+    vorigVeld = vulSlots(vorigVeld, veld)
+    out.push({
+      kwart: Math.floor(h / 2),
+      helft: h % 2,
+      van: h * dur,
+      tot: (h + 1) * dur,
+      min: dur,
+      keeper,
+      verdedigers: vorigVeld.slice(0, 2),
+      aanval: vorigVeld.slice(2),
+      bank,
     })
   }
   return out
@@ -163,7 +237,12 @@ export function wisselParen(sch: Blok[], i: number, opstelling: Opstelling): Wis
 
   for (const p of erin) {
     let uit: string | null = null
-    const j = eruit.findIndex((x) => achterin(x) === achterin(p))
+    const plek = plekVan(nu, p, opstelling.formatie)
+    // Vrije stand: wie de plek afstaat; met linies: iemand uit dezelfde linie.
+    const j =
+      opstelling.wissel === 'vrij'
+        ? eruit.findIndex((x) => plekVan(v, x, opstelling.formatie) === plek)
+        : eruit.findIndex((x) => achterin(x) === achterin(p))
     if (j >= 0) uit = eruit.splice(j, 1)[0]
     else if (eruit.length) uit = eruit.shift() ?? null
     paren.push({ plek: plekVan(nu, p, opstelling.formatie), erin: p, eruit: uit })
@@ -228,6 +307,13 @@ export function keepers(opstelling: Opstelling): string[] {
 export function waarschuwing(opstelling: Opstelling): string | null {
   const n = opstelling.achter.length + opstelling.voor.length
   if (n < 6) return `Met ${n} spelers krijg je geen 6 tegen 6 rond — je hebt er minstens 6 nodig.`
+  if (opstelling.wissel === 'vrij') {
+    const k = opstelling.achter.length
+    if (k === 0) return 'Zet minstens één speler in de keeperlijst.'
+    if (n !== 8) return `${n} spelers: de bankbeurten zijn dan niet meer precies gelijk. Kijk bij de speelminuten wie er tekort komt.`
+    if (k !== 4) return `Met ${k} keepers keept niet iedereen precies één kwart. Zet er 4 in de keeperlijst.`
+    return null
+  }
   if (opstelling.achter.length < 3)
     return `Achterin staan er maar ${opstelling.achter.length}. Schuif er eentje naar achteren, anders mist er een verdediger.`
   if (opstelling.voor.length < 3)
@@ -249,6 +335,11 @@ export const WISSEL_STANDEN: { value: WisselStand; label: string; hint: string }
     value: 'kwart',
     label: 'Per kwart — 1 × 10 min bank',
     hint: 'Rustiger langs de lijn: twee wisselmomenten minder per kwart, maar wel 10 minuten stilzitten.',
+  },
+  {
+    value: 'vrij',
+    label: 'Vrij, elke 5 minuten — geen linies',
+    hint: 'De keepers staan vast; de bank rouleert over iedereen en wie erin komt neemt de plek over van wie eruit gaat, ook verdediger ↔ aanvaller.',
   },
 ]
 

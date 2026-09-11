@@ -17,7 +17,7 @@
  *     linies heen als het moet.
  * Zonder wijzigingen komt daar bij 8 spelers precies het plan uit (zie live.test.ts).
  */
-import { AANTAL_KWARTEN, blokken, positieNamen } from './schedule'
+import { AANTAL_KWARTEN, blokken, positieNamen, vijfMinuten } from './schedule'
 import type { Beschikbaarheid, Blok, Doel, Formatie, Live, LiveBlok, Opstelling, Verschil } from './types'
 
 const VERDEDIGERS = 2
@@ -69,7 +69,7 @@ export function nieuwLive(plan: Opstelling, huidig = 0): Live {
 
 /** Hoort deze live-stand bij dit plan (zelfde aantal blokken)? Anders opnieuw beginnen. */
 export function past(plan: Opstelling, live: Live): boolean {
-  return live.blokken.length === (plan.wissel === '5min' ? 8 : 4)
+  return live.blokken.length === (vijfMinuten(plan.wissel) ? 8 : 4)
 }
 
 export function beschikbaar(live: Live, speler: string, h: number): boolean {
@@ -99,7 +99,7 @@ export function zetHuidig(live: Live, h: number): Live {
 export function herbereken(plan: Opstelling, live: Live, vanaf: number): Live {
   const n = live.blokken.length
   if (!n) return live
-  const perKwart = plan.wissel === '5min' ? 2 : 1
+  const perKwart = vijfMinuten(plan.wissel) ? 2 : 1
   const dur = perKwart === 2 ? 5 : 10
   const spelers = [...plan.achter, ...plan.voor]
   const volgorde = (p: string) => spelers.indexOf(p)
@@ -210,7 +210,7 @@ export function herbereken(plan: Opstelling, live: Live, vanaf: number): Live {
     }
     const b = out[h]
     const veldSpelers = spelers.filter((p) => p !== b.keeper && opVeld(b, p))
-    const plekken = vulVeld(vorig, veldSpelers, (p) => plan.achter.includes(p))
+    const plekken = vulVeld(vorig, veldSpelers, plan.wissel === 'vrij' ? null : (p) => plan.achter.includes(p))
     out[h] = metVeld(b, plekken)
     vorig = plekken
   }
@@ -221,9 +221,9 @@ export function herbereken(plan: Opstelling, live: Live, vanaf: number): Live {
 /**
  * Als `vulSlots`, maar op een vast aantal plekken: wie blijft houdt zijn plek; wie erin komt
  * neemt bij voorkeur een vrije plek in de eigen linie (achterin → verdediger), anders de
- * eerste vrije plek.
+ * eerste vrije plek. `achterin` null (vrije stand): altijd de eerste vrije plek.
  */
-function vulVeld(vorig: string[], nieuw: string[], achterin: (p: string) => boolean): string[] {
+function vulVeld(vorig: string[], nieuw: string[], achterin: ((p: string) => boolean) | null): string[] {
   const out = vul([], VELD)
   const wacht = nieuw.slice(0, VELD)
   for (let i = 0; i < VELD; i++) {
@@ -236,7 +236,7 @@ function vulVeld(vorig: string[], nieuw: string[], achterin: (p: string) => bool
   const vrij = () => out.map((p, i) => (p ? -1 : i)).filter((i) => i >= 0)
   while (wacht.length && vrij().length) {
     const p = wacht[0]
-    const eigen = vrij().find((i) => (i < VERDEDIGERS) === achterin(p))
+    const eigen = achterin ? vrij().find((i) => (i < VERDEDIGERS) === achterin(p)) : undefined
     out[eigen ?? vrij()[0]] = p
     wacht.shift()
   }

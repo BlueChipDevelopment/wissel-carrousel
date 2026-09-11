@@ -25,7 +25,7 @@ import {
   zetOpPlekInPlan,
 } from '@/domain/live'
 import { AttendancePanel } from '@/components/AttendancePanel'
-import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig } from '@/domain/schedule'
+import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig, vijfMinuten } from '@/domain/schedule'
 import type { Beschikbaarheid, Doel, Live, Opstelling, Verschil } from '@/domain/types'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDateShort, nextSaturdayISO, todayISO } from '@/utils/dateUtils'
@@ -142,7 +142,8 @@ export function TeamPage() {
 
   const live = useMemo(() => (draft ? liveVan(draft) : null), [draft])
   const sch = useMemo(() => (draft && live ? samengesteld(draft.opstelling, live) : []), [draft, live])
-  const vijf = draft?.opstelling.wissel === '5min'
+  const vijf = draft ? vijfMinuten(draft.opstelling.wissel) : false
+  const vrij = draft?.opstelling.wissel === 'vrij'
   const aanwezigIds = draft ? [...draft.opstelling.achter, ...draft.opstelling.voor] : []
   const mins = useMemo(() => minuten(sch, aanwezigIds), [sch, aanwezigIds])
   const uniekeMinuten = new Set(aanwezigIds.map((p) => mins[p]))
@@ -490,7 +491,7 @@ export function TeamPage() {
           <ScheduleTable blokken={sch} opstelling={draft.opstelling} naam={naam} />
         </>
       ) : (
-        <p className="hint">Zet minstens één speler achterin om het schema te zien.</p>
+        <p className="hint">{vrij ? 'Zet minstens één speler in de keeperlijst om het schema te zien.' : 'Zet minstens één speler achterin om het schema te zien.'}</p>
       )}
 
       <LineupEditor
@@ -504,7 +505,13 @@ export function TeamPage() {
       {kanTonen && <MinutesList blokken={sch} opstelling={draft.opstelling} naam={naam} />}
 
       <footer className="border-t border-line pt-4 text-[13.5px] text-muted">
-        {vijf ? (
+        {vrij ? (
+          <>
+            <b>Vrij:</b> de keepers staan vast; de bank rouleert over iedereen, één keer per helft, en niemand zit vlak
+            vóór of ná zijn keepersbeurt. Wie erin komt neemt de plek over van wie eruit gaat, ook verdediger ↔
+            aanvaller. Iedereen komt op 30 minuten uit.
+          </>
+        ) : vijf ? (
           <>
             <b>Achterin:</b> niemand zit op de bank in het blokje vlak vóór of vlak ná zijn keepersbeurt — anders sta
             je 15 minuten achter elkaar stil. Je gaat dus warm het doel in en warm het veld weer op. Voorin schuift

@@ -78,7 +78,8 @@ supabase/migrations/   # schema, RLS (open), seed
 
 `achter[]` is de keepervolgorde (index 0 keept kwart 1, index 3 keept kwart 4); `voor[]` is de
 opstelling voorin (linksvoor, spits, rechtsvoor, daarna de wissel). Wie erin komt neemt de plek
-over van wie eruit gaat (`vulSlots`). In de 5-minutenstand met 4 achterin bepaalt `BANK4` wie
+over van wie eruit gaat (`vulSlots`). In de stand `vrij` zijn er geen linies: `achter[]` is alleen
+de keeperlijst en `VRIJ8` (`blokkenVrij`) laat de bank over iedereen rouleren. In de 5-minutenstand met 4 achterin bepaalt `BANK4` wie
 wanneer op de bank zit, zó dat niemand op de bank zit direct vóór of ná zijn keepersbeurt,
 niemand twee blokjes achter elkaar zit, en iedereen op 30 minuten uitkomt. Keeperbeurten worden
 niet apart bijgehouden maar afgeleid uit de werkelijke keepers (`matches.keepers`, door de app

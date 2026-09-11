@@ -110,7 +110,7 @@ export function MatchesPage() {
                       {m.live && <small className="ml-2 text-muted">live</small>}
                     </Td>
                     <Td muted>{m.afwezig.length ? m.afwezig.map(naam).join(', ') : '–'}</Td>
-                    <Td muted>{m.wissel === '5min' ? '5 min' : 'kwart'} · {m.formatie}</Td>
+                    <Td muted>{m.wissel === '5min' ? '5 min' : m.wissel === 'vrij' ? 'vrij' : 'kwart'} · {m.formatie}</Td>
                     <Td>
                       <button type="button" className="btn btn-small" onClick={() => verwijder(m)}>
                         Verwijder
