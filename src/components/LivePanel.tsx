@@ -81,14 +81,30 @@ export function LivePanel({
         )}
       </div>
 
+      {/* Ingeklapt één regel, zodat het veldje op de telefoon niet verschuift bij elke actie. */}
       {verschillen.length > 0 && (
-        <div className="rounded-lg border border-keeper/45 bg-keeper/15 px-[13px] py-[10px] text-[14px]">
-          <div className="flex items-baseline justify-between gap-3">
-            <b className="font-display text-[15px] uppercase tracking-[0.08em]">Dit verandert</b>
-            <button type="button" className="hint underline" onClick={onSluitVerschillen}>
+        <details
+          key={`${verschillen.length}:${verschillen[0].blok}:${verschillen[0].speler}:${verschillen[0].naar}`}
+          className="rounded-lg border border-keeper/45 bg-keeper/15 px-[13px] py-[7px] text-[14px]"
+        >
+          <summary className="flex cursor-pointer items-baseline justify-between gap-3 select-none">
+            <span>
+              <b className="font-display text-[14px] uppercase tracking-[0.08em]">Dit verandert</b>{' '}
+              <span className="text-muted">
+                in {perBlok.size} blok{perBlok.size === 1 ? '' : 'ken'} · toon
+              </span>
+            </span>
+            <button
+              type="button"
+              className="hint underline"
+              onClick={(e) => {
+                e.preventDefault()
+                onSluitVerschillen()
+              }}
+            >
               sluit
             </button>
-          </div>
+          </summary>
           <ul className="m-0 mt-1 list-none p-0">
             {[...perBlok.entries()].map(([i, lijst]) => (
               <li key={i} className="py-[2px]">
@@ -102,7 +118,7 @@ export function LivePanel({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       <details className="card overflow-hidden shadow-none">
