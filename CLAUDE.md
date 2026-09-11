@@ -90,7 +90,8 @@ werkelijke bezetting per blok, handmatig gezette blokken en beschikbaarheid per 
 `herbereken()` bepaalt alleen de resterende, niet-handmatige blokken opnieuw: keeper per kwart,
 bank per blok (plan minus wie er niet is), dan ruilen tot niemand meer dan één blok voorligt,
 dan plekken via `vulSlots`. Zonder wijzigingen komt er bij 8 spelers precies het plan uit. De
-UI toont altijd `samengesteld(plan, live ?? nieuwLive(plan))`. Live-acties slaan direct op
+UI toont altijd `samengesteld(plan, live ?? nieuwLive(plan))`. Slepen in blok 1 zolang dat het
+huidige blok is (vóór de aftrap) past het plan aan (`zetOpPlekInPlan`), geen live-wissel. Live-acties slaan direct op
 (debounce) en gaan via realtime naar de andere telefoons; last-write-wins op `updated_at`.
 
 ## Toegang (belangrijk)

@@ -13,6 +13,7 @@ import { SEED_START_JO8_1 } from '@/data/seed'
 import {
   keepersVan,
   keepersWerkelijk,
+  laatLos,
   nieuwLive,
   past,
   samengesteld,
@@ -21,6 +22,7 @@ import {
   zetBeschikbaarheid,
   zetHuidig,
   zetOpPlek,
+  zetOpPlekInPlan,
 } from '@/domain/live'
 import { AttendancePanel } from '@/components/AttendancePanel'
 import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig } from '@/domain/schedule'
@@ -303,7 +305,13 @@ export function TeamPage() {
     const veld = [...b.verdedigers, ...b.aanval]
     const ander = doel.soort === 'goal' ? b.keeper : doel.soort === 'veld' ? veld[doel.i] || null : null
     const label = ander ? `${naam(speler)} ↔ ${naam(ander)}` : `${naam(speler)} naar ${doel.soort === 'bank' ? 'de bank' : 'het veld'}`
-    zetLive(label, (l, plan) => zetOpPlek(plan, l, geldigBlok, speler, doel))
+    if (geldigBlok === 0 && live.huidig === 0) {
+      // Vóór de aftrap is blok 1 de beginopstelling: pas het plan aan, niet de werkelijkheid.
+      const r = zetOpPlekInPlan(draft.opstelling, live, speler, doel)
+      zetLive(label, () => r.live, { opstelling: r.opstelling, afwezig: draft.afwezig })
+    } else {
+      zetLive(label, (l, plan) => zetOpPlek(plan, l, geldigBlok, speler, doel))
+    }
   }
 
   return (
@@ -421,7 +429,15 @@ export function TeamPage() {
         <>
           <section className="flex flex-col gap-4">
             <MatchClock sleutel={team.id} vijf={!!vijf} onBlok={onKlokBlok} />
-            <BlockTabs blokken={sch} actief={geldigBlok} vijf={!!vijf} naam={naam} onKies={setBlok} huidig={live.huidig} />
+            <BlockTabs
+              blokken={sch}
+              actief={geldigBlok}
+              vijf={!!vijf}
+              naam={naam}
+              onKies={setBlok}
+              huidig={live.huidig}
+              handmatig={live.handmatig}
+            />
             <LivePanel
               blokken={sch}
               live={live}
@@ -442,7 +458,22 @@ export function TeamPage() {
                   <span>
                     Kwart {huidigBlok.kwart + 1} · {huidigBlok.van}–{huidigBlok.tot} min
                   </span>
-                  <span>{bewerkbaar ? draft.opstelling.formatie : 'vastgelegd'}</span>
+                  {bewerkbaar && live.handmatig.includes(geldigBlok) ? (
+                    <button
+                      type="button"
+                      className="underline decoration-[rgba(240,247,238,.5)] underline-offset-2 hover:text-white"
+                      title="Dit blok heb je zelf gezet; de app rekent het niet om. Loslaten geeft het weer aan de app."
+                      onClick={() =>
+                        zetLive(`${vijf ? `${huidigBlok.van}–${huidigBlok.tot}` : `kwart ${huidigBlok.kwart + 1}`} loslaten`, (l, plan) =>
+                          laatLos(plan, l, geldigBlok),
+                        )
+                      }
+                    >
+                      zelf gezet · loslaten
+                    </button>
+                  ) : (
+                    <span>{bewerkbaar ? draft.opstelling.formatie : 'vastgelegd'}</span>
+                  )}
                 </div>
                 <Pitch
                   blok={huidigBlok}

@@ -3,6 +3,7 @@ import {
   beschikbaar,
   herbereken,
   keepersWerkelijk,
+  laatLos,
   nieuwLive,
   past,
   samengesteld,
@@ -12,6 +13,7 @@ import {
   zetBeschikbaarheid,
   zetHuidig,
   zetOpPlek,
+  zetOpPlekInPlan,
 } from './live'
 import { blokken, minuten } from './schedule'
 import type { Blok, Live, Opstelling } from './types'
@@ -256,5 +258,98 @@ describe('tellen uit de werkelijkheid', () => {
     const v = verschillen(samengesteld(JO8, start), samengesteld(JO8, live), JO8.formatie)
     expect(v).toContainEqual({ blok: 0, speler: 'Christopher', van: 'bank', naar: 'verdediger links' })
     expect(v).toContainEqual({ blok: 0, speler: 'Sara', van: 'verdediger links', naar: 'bank' })
+  })
+})
+
+describe('slepen vóór de aftrap: zetOpPlekInPlan', () => {
+  it('iemand anders op goal in blok 1: alleen die keeper verandert, de andere drie blijven', () => {
+    const start = nieuwLive(JO8)
+    const { opstelling, live } = zetOpPlekInPlan(JO8, start, 'Guus', { soort: 'goal' })
+    expect(opstelling.achter).toEqual(['Guus', 'Sara', 'Christopher', 'Floris'])
+    expect(opstelling.voor).toEqual(['Ties', 'Julan', 'Mees', 'Adam'])
+    expect(live.handmatig).toEqual([])
+    const { sch } = controleer(opstelling, live)
+    expect(keepersWerkelijk(sch)).toEqual(['Guus', 'Sara', 'Christopher', 'Floris'])
+    expect(sch[0].aanval[2]).toBe('Mees')
+    expect(sch).toEqual(samengesteld(opstelling, nieuwLive(opstelling)))
+    const m = minuten(sch, ALLE)
+    for (const p of ALLE) expect(m[p], p).toBe(30)
+  })
+
+  it('veld ↔ veld over de linies heen: de spelers ruilen van linie én van plek', () => {
+    const start = nieuwLive(JO8)
+    const { opstelling, live } = zetOpPlekInPlan(JO8, start, 'Ties', { soort: 'veld', i: 0 })
+    expect(opstelling.achter).toEqual(['Mees', 'Ties', 'Christopher', 'Floris'])
+    expect(opstelling.voor).toEqual(['Sara', 'Julan', 'Guus', 'Adam'])
+    const { sch } = controleer(opstelling, live)
+    expect(sch[0].verdedigers[0]).toBe('Ties')
+    expect(sch[0].aanval[0]).toBe('Sara')
+  })
+
+  it('naar de bank: ruilt met de wissel van de eigen linie, de goal blijft bezet', () => {
+    const start = nieuwLive(JO8)
+    const { opstelling, live } = zetOpPlekInPlan(JO8, start, 'Mees', { soort: 'bank' })
+    expect(opstelling.achter).toEqual(['Christopher', 'Sara', 'Mees', 'Floris'])
+    const { sch } = controleer(opstelling, live)
+    expect(sch[0].keeper).toBe('Christopher')
+    expect(sch[0].bank).toContain('Mees')
+    expect(keepersWerkelijk(sch)).toEqual(['Christopher', 'Sara', 'Mees', 'Floris'])
+  })
+
+  it('van de bank naar het veld (blok 1 vóór de aftrap): geen handmatig blok, plan volgt', () => {
+    const start = nieuwLive(JO8)
+    // Plan: Christopher (achter[2]) en Adam (voor[3]) zitten in blok 1. Adam erin voor Guus.
+    const { opstelling, live } = zetOpPlekInPlan(JO8, start, 'Adam', { soort: 'veld', i: 4 })
+    expect(opstelling.voor).toEqual(['Ties', 'Julan', 'Adam', 'Guus'])
+    expect(opstelling.achter).toEqual(JO8.achter)
+    expect(live.handmatig).toEqual([])
+    const { sch } = controleer(opstelling, live)
+    expect(sch[0].bank).toEqual(['Christopher', 'Guus'])
+  })
+
+  it('bank → bank en een onbekende speler doen niets', () => {
+    const start = nieuwLive(JO8)
+    expect(zetOpPlekInPlan(JO8, start, 'Adam', { soort: 'bank' })).toEqual({ opstelling: JO8, live: start })
+    expect(zetOpPlekInPlan(JO8, start, 'Niemand', { soort: 'goal' })).toEqual({ opstelling: JO8, live: start })
+  })
+
+  it('beschikbaarheid en later handmatig gezette blokken blijven staan; een oud handmatig blok 1 vervalt', () => {
+    const a = zetBeschikbaarheid(JO8, nieuwLive(JO8), 'Floris', { tot: 6 })
+    const b = wisselPlek(JO8, a, 5, 'Guus', 'Julan')
+    const stale = { ...b, handmatig: [0, ...b.handmatig] }
+    const { opstelling, live } = zetOpPlekInPlan(JO8, stale, 'Sara', { soort: 'goal' })
+    expect(opstelling.achter).toEqual(['Sara', 'Mees', 'Christopher', 'Floris'])
+    expect(live.beschikbaarheid).toEqual({ Floris: { tot: 6 } })
+    expect(live.handmatig).toEqual([5])
+    expect(live.blokken[5]).toEqual(b.blokken[5])
+    controleer(opstelling, live)
+  })
+})
+
+describe('laatLos', () => {
+  it('geeft een handmatig blok terug aan de app: het plan komt terug', () => {
+    const start = nieuwLive(JO8)
+    const a = wisselPlek(JO8, start, 4, 'Adam', 'Ties')
+    expect(a.handmatig).toEqual([4])
+    const b = laatLos(JO8, a, 4)
+    expect(b.handmatig).toEqual([])
+    expect(samengesteld(JO8, b)).toEqual(samengesteld(JO8, start))
+  })
+
+  it('laat andere handmatige blokken en de historie staan', () => {
+    const start = zetHuidig(nieuwLive(JO8), 2)
+    const a = wisselPlek(JO8, wisselPlek(JO8, start, 4, 'Adam', 'Ties'), 6, 'Julan', 'Guus')
+    const b = laatLos(JO8, a, 4)
+    expect(b.handmatig).toEqual([6])
+    expect(b.blokken[6]).toEqual(a.blokken[6])
+    expect(b.blokken.slice(0, 2)).toEqual(a.blokken.slice(0, 2))
+    controleer(JO8, b)
+  })
+
+  it('doet niets voor een blok dat niet handmatig is of al gespeeld', () => {
+    const start = zetHuidig(nieuwLive(JO8), 2)
+    expect(laatLos(JO8, start, 3)).toBe(start)
+    const a = { ...start, handmatig: [1] }
+    expect(laatLos(JO8, a, 1)).toBe(a)
   })
 })

@@ -53,7 +53,7 @@ async function speeltijden(page: Page): Promise<number[]> {
   return teksten.map((t) => Number(t.match(/(\d+)'/)?.[1]))
 }
 
-test('slepen van de bank naar het veld: wissel nu, compensatie later, iedereen op 30', async ({ page }) => {
+test('slepen vóór de aftrap past de beginopstelling aan: wissel erin, de ander eruit, iedereen op 30', async ({ page }) => {
   await openTeam(page)
   const voor = await markerNamen(page)
   const wissel = voor.bank[0]
@@ -102,7 +102,7 @@ test('een uitvaller vanaf blok 3: de rest wordt eerlijk verdeeld', async ({ page
   expect(minuten.reduce((a, b) => a + b, 0)).toBe(240)
 })
 
-test('keeper naar de bank: goal leeg, maar het veld blijft staan (ook op een ander blok)', async ({ page }) => {
+test('keeper naar de bank vóór de aftrap: de wissel achterin keept, het veld blijft staan (ook op een ander blok)', async ({ page }) => {
   await openTeam(page)
   const voor = await markerNamen(page)
   const keeper = voor.veld[0]
@@ -115,7 +115,7 @@ test('keeper naar de bank: goal leeg, maar het veld blijft staan (ook op een and
   expect(na.veld).not.toContain(keeper)
   await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
 
-  // Tussen blokken wisselen laat het veld gewoon staan, ook terug naar het blok zonder keeper.
+  // Tussen blokken wisselen laat het veld gewoon staan, ook terug naar blok 1.
   await page.getByRole('tab', { name: /5–10/ }).click()
   await expect(page.getByRole('img', { name: /Opstelling op het veld/ })).toBeVisible()
   await page.getByRole('tab', { name: /0–5/ }).click()
@@ -150,4 +150,22 @@ test('twee tabbladen zien dezelfde wedstrijd', async ({ context }) => {
   const opB = await markerNamen(b)
   expect(opB.veld).toContain(voor.bank[0])
   expect(opB.bank).toContain(voor.veld[1])
+})
+
+test('een zelf gezet blok krijgt een handje en is weer los te laten', async ({ page }) => {
+  await openTeam(page)
+  await page.getByRole('tab', { name: /10–15/ }).click()
+  const voor = await markerNamen(page)
+
+  await sleep(page, PLEK.bank0, PLEK.verdedigerLinks)
+
+  const tab = page.getByRole('tab', { name: /10–15/ })
+  await expect(tab.getByLabel('zelf gezet')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /15–20/ }).getByLabel('zelf gezet')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'zelf gezet · loslaten' }).click()
+
+  await expect(tab.getByLabel('zelf gezet')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '↶ Ongedaan: 10–15 loslaten' })).toBeVisible()
+  expect(await markerNamen(page)).toEqual(voor)
 })

@@ -57,7 +57,13 @@ Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast hou
   wijzigen; het huidige en de komende blokken wel.
 - **Slepen op het veld.** Speler van de bank naar een plek, twee plekken ruilen, iemand op goal,
   of naar de bank. Werkt met pointer events (ook op de telefoon). Het blok wordt dan
-  *handmatig* en blijft staan bij latere herberekeningen.
+  *handmatig* en blijft staan bij latere herberekeningen. Zo'n blok heeft een handje op het
+  tabje; met "zelf gezet · loslaten" in de veldkop geef je het weer aan de app.
+- **Vóór de aftrap is blok 1 de beginopstelling.** Zolang blok 1 het huidige blok is, past
+  slepen daar het *plan* aan (de twee spelers ruilen van plek in de linies; "naar de bank" ruilt
+  met de wissel van de eigen linie) en volgt de rest van het schema het nieuwe plan. Zo verandert
+  alleen de keeper die je echt verplaatst, niet de hele keepervolgorde. Vanaf blok 2 is slepen
+  een live-wissel zoals hierboven.
 - **Uitvallen en later komen.** Per speler een venster "valt uit vanaf …" of "komt vanaf …".
   Een speler die volgens het plan afwezig was en toch komt, gaat achteraan in de kortste linie
   (dus zonder keeperbeurt).

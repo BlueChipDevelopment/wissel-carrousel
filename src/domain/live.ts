@@ -312,6 +312,57 @@ export function zetOpPlek(plan: Opstelling, live: Live, h: number, speler: strin
   return herbereken(plan, { ...live, blokken: blokkenNieuw, handmatig }, h + 1)
 }
 
+/**
+ * Slepen in blok 1 vóór de aftrap is de beginopstelling aanpassen, geen live-wissel: de twee
+ * spelers ruilen van plek in de linies (`achter`/`voor`), zodat de keepervolgorde en de rest
+ * van het plan alleen veranderen voor wie er echt van plek gaat. "Naar de bank" ruilt met de
+ * wissel van de eigen linie; naar een lege plek verhuist de speler naar die linie. De
+ * live-stand volgt het nieuwe plan; uitvallers en later handmatig gezette blokken blijven staan.
+ */
+export function zetOpPlekInPlan(
+  plan: Opstelling,
+  live: Live,
+  speler: string,
+  doel: Doel,
+): { opstelling: Opstelling; live: Live } {
+  const ongewijzigd = { opstelling: plan, live }
+  const b = live.blokken[0]
+  if (!b) return ongewijzigd
+  const van = locatie(b, speler)
+  if (!van) return ongewijzigd
+  const achterin = (p: string) => plan.achter.includes(p)
+
+  let ander: string | null = null
+  if (doel.soort === 'goal') ander = b.keeper
+  else if (doel.soort === 'veld') ander = veldPlekken(b)[doel.i] || null
+  else {
+    if (van.soort === 'bank') return ongewijzigd
+    ander = b.bank.find((p) => achterin(p) === achterin(speler)) ?? b.bank[0] ?? null
+  }
+  if (ander === speler) return ongewijzigd
+
+  let opstelling: Opstelling
+  if (ander) {
+    const a = ander
+    const ruil = (l: string[]) => l.map((p) => (p === speler ? a : p === a ? speler : p))
+    opstelling = { ...plan, achter: ruil(plan.achter), voor: ruil(plan.voor) }
+  } else if (doel.soort === 'veld' && doel.i < VERDEDIGERS !== achterin(speler)) {
+    const weg = (l: string[]) => l.filter((p) => p !== speler)
+    opstelling = achterin(speler)
+      ? { ...plan, achter: weg(plan.achter), voor: [...plan.voor, speler] }
+      : { ...plan, achter: [...plan.achter, speler], voor: weg(plan.voor) }
+  } else return ongewijzigd
+
+  const nieuw = herbereken(opstelling, { ...live, handmatig: live.handmatig.filter((h) => h !== 0) }, 0)
+  return { opstelling, live: nieuw }
+}
+
+/** Een handmatig gezet blok weer aan de app geven: het wordt vanaf daar opnieuw berekend. */
+export function laatLos(plan: Opstelling, live: Live, h: number): Live {
+  if (h < live.huidig || !live.handmatig.includes(h)) return live
+  return herbereken(plan, { ...live, handmatig: live.handmatig.filter((x) => x !== h) }, h)
+}
+
 /** Twee spelers in blok `h` van plek laten ruilen (bank ↔ veld, veld ↔ veld, of met de keeper). */
 export function wisselPlek(plan: Opstelling, live: Live, h: number, a: string, b: string): Live {
   const blok = live.blokken[h]
