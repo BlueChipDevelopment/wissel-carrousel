@@ -27,7 +27,7 @@ import {
 import { AttendancePanel } from '@/components/AttendancePanel'
 import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig, vijfMinuten } from '@/domain/schedule'
 import type { Beschikbaarheid, Doel, Live, Opstelling, Verschil } from '@/domain/types'
-import { db, type Match, type Player } from '@/services/db'
+import { ConflictError, db, type Match, type Player } from '@/services/db'
 import { formatDateShort, nextSaturdayISO, todayISO } from '@/utils/dateUtils'
 
 interface Draft {
@@ -38,6 +38,9 @@ interface Draft {
   afwezig: string[]
   /** Werkelijkheid tijdens de wedstrijd; null zolang alles volgens plan is. */
   live: Live | null
+  /** Opgeslagen keepers; alleen leidend als de coach ze heeft vastgezet (keepersVast). */
+  keepers: string[]
+  keepersVast: boolean
 }
 
 /** Wat de undo-knop terugzet: plan én werkelijkheid van vóór de wijziging. */
@@ -207,34 +210,51 @@ export function TeamPage() {
     [],
   )
 
+  /**
+   * Opslaan. Bij een bestaande wedstrijd alleen over de versie heen die deze telefoon kende;
+   * heeft een andere telefoon intussen opgeslagen, dan blijft die staan en kiest de coach
+   * (`remote`). `forceer` = bewust toch overschrijven.
+   */
   const bewaar = useCallback(
-    async (stil: boolean) => {
+    async (stil: boolean, forceer = false) => {
       const d = draftRef.current
       if (!d) return
       if (!stil) setStatus('Bezig…')
       setFout(null)
       try {
-        const saved = await db.saveMatch({
-          id: d.id,
-          teamId: team.id,
-          date: d.date,
-          opponent: d.opponent.trim() || null,
-          wissel: d.opstelling.wissel,
-          formatie: d.opstelling.formatie,
-          achter: d.opstelling.achter,
-          voor: d.opstelling.voor,
-          afwezig: d.afwezig,
-          keepers: keepersWerkelijk(samengesteld(d.opstelling, liveVan(d))),
-          live: d.live,
-          notes: null,
-        })
+        const verwacht = !forceer && d.id && laatstBewaard.current ? laatstBewaard.current : undefined
+        const saved = await db.saveMatch(
+          {
+            id: d.id,
+            teamId: team.id,
+            date: d.date,
+            opponent: d.opponent.trim() || null,
+            wissel: d.opstelling.wissel,
+            formatie: d.opstelling.formatie,
+            achter: d.opstelling.achter,
+            voor: d.opstelling.voor,
+            afwezig: d.afwezig,
+            keepers: d.keepersVast ? d.keepers : keepersWerkelijk(samengesteld(d.opstelling, liveVan(d))),
+            keepersVast: d.keepersVast,
+            live: d.live,
+            notes: null,
+          },
+          verwacht,
+        )
         laatstBewaard.current = saved.updatedAt
         setMatches((m) => [saved, ...m.filter((x) => x.id !== saved.id)].sort((a, b) => b.date.localeCompare(a.date)))
-        setDraft((x) => (x && x.date === saved.date ? { ...x, id: saved.id } : x))
+        setDraft((x) => (x && x.date === saved.date ? { ...x, id: saved.id, keepers: saved.keepers } : x))
         setDirty(false)
         setRemote(null)
         setStatus(stil ? 'Gedeeld met de andere telefoons.' : `Opgeslagen voor ${formatDateShort(saved.date)}.`)
       } catch (e) {
+        if (e instanceof ConflictError) {
+          setMatches((m) => [e.huidig, ...m.filter((x) => x.id !== e.huidig.id)].sort((a, b) => b.date.localeCompare(a.date)))
+          setRemote(e.huidig)
+          setDirty(true)
+          setStatus('Niet opgeslagen: een andere telefoon was eerder.')
+          return
+        }
         setFout(e instanceof Error ? e.message : String(e))
         setStatus(null)
       }
@@ -243,8 +263,12 @@ export function TeamPage() {
   )
 
   // Elke live-actie wordt kort daarna stil opgeslagen (last-write-wins).
+  const remoteRef = useRef<Match | null>(null)
+  remoteRef.current = remote
   useEffect(() => {
     if (!liveTick) return
+    // Zolang er een nieuwere versie van een andere telefoon open staat, eerst laten kiezen.
+    if (remoteRef.current) return
     const id = window.setTimeout(() => void bewaar(true), 400)
     return () => window.clearTimeout(id)
   }, [liveTick, bewaar])
@@ -363,16 +387,21 @@ export function TeamPage() {
         )}
         {fout && <p className="text-[14px] text-voor">{fout}</p>}
         {remote && (
-          <p className="rounded-lg border border-keeper/45 bg-keeper/15 px-[13px] py-[10px] text-[14px]">
-            Een andere telefoon heeft deze wedstrijd intussen aangepast. Opslaan overschrijft dat.{' '}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-keeper/45 bg-keeper/15 px-[13px] py-[10px] text-[14px]">
+            <span className="basis-full sm:basis-auto sm:flex-1">
+              Een andere telefoon heeft deze wedstrijd intussen aangepast. Wat hier staat is niet opgeslagen.
+            </span>
             <button
               type="button"
-              className="underline"
+              className="btn btn-primary btn-small"
               onClick={() => laadDraft(draftVanMatch(remote, spelers), remote.updatedAt)}
             >
               Die versie ophalen
             </button>
-          </p>
+            <button type="button" className="btn btn-small" onClick={() => void bewaar(false, true)}>
+              Toch mijn versie opslaan
+            </button>
+          </div>
         )}
         {wedstrijdOpen && (
           <div className="flex flex-wrap items-end gap-3 border-t border-line pt-3">
@@ -550,6 +579,8 @@ function draftVanMatch(m: Match, spelers: Player[]): Draft {
     opstelling: { achter: geldig(m.achter), voor: geldig(m.voor), wissel: m.wissel, formatie: m.formatie },
     afwezig: geldig(m.afwezig),
     live: m.live,
+    keepers: m.keepers,
+    keepersVast: m.keepersVast,
   }
 }
 
@@ -578,6 +609,8 @@ function maakDraft(datum: string, spelers: Player[], matches: Match[], slug: str
       opstelling: { achter, voor: [...voor, ...nieuw], wissel: vorige.wissel, formatie: vorige.formatie },
       afwezig: [],
       live: null,
+      keepers: [],
+      keepersVast: false,
     }
   }
 
@@ -590,5 +623,13 @@ function maakDraft(datum: string, spelers: Player[], matches: Match[], slug: str
     const rest = actief.map((p) => p.id).filter((id) => !achter.includes(id) && !voor.includes(id))
     if (achter.length + voor.length >= 6) verdeling = { achter, voor: [...voor, ...rest] }
   }
-  return { date: datum, opponent: '', opstelling: { ...verdeling, wissel: '5min', formatie: '1-2-3' }, afwezig: [], live: null }
+  return {
+    date: datum,
+    opponent: '',
+    opstelling: { ...verdeling, wissel: '5min', formatie: '1-2-3' },
+    afwezig: [],
+    live: null,
+    keepers: [],
+    keepersVast: false,
+  }
 }

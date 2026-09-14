@@ -13,4 +13,5 @@ export const db: DataSource = url && key ? createSupabaseSource(url, key) : crea
 
 export const isDemo = db.kind === 'local'
 
+export { ConflictError } from './types'
 export type { DataSource, Match, MatchInput, Player, Team, Unsubscribe } from './types'

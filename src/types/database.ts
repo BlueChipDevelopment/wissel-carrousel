@@ -22,6 +22,7 @@ export type Database = {
           formatie: string
           id: string
           keepers: string[]
+          keepers_vast: boolean
           live: Json | null
           match_date: string
           notes: string | null
@@ -38,6 +39,7 @@ export type Database = {
           formatie?: string
           id?: string
           keepers?: string[]
+          keepers_vast?: boolean
           live?: Json | null
           match_date: string
           notes?: string | null
@@ -54,6 +56,7 @@ export type Database = {
           formatie?: string
           id?: string
           keepers?: string[]
+          keepers_vast?: boolean
           live?: Json | null
           match_date?: string
           notes?: string | null
@@ -72,6 +75,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      match_history: {
+        Row: {
+          achter: string[]
+          actie: string
+          afwezig: string[]
+          formatie: string
+          id: number
+          keepers: string[]
+          keepers_vast: boolean
+          live: Json | null
+          match_date: string
+          match_id: string
+          notes: string | null
+          opponent: string | null
+          saved_at: string
+          team_id: string
+          voor: string[]
+          wissel: string
+        }
+        Insert: {
+          achter: string[]
+          actie: string
+          afwezig: string[]
+          formatie: string
+          id?: never
+          keepers: string[]
+          keepers_vast: boolean
+          live?: Json | null
+          match_date: string
+          match_id: string
+          notes?: string | null
+          opponent?: string | null
+          saved_at?: string
+          team_id: string
+          voor: string[]
+          wissel: string
+        }
+        Update: {
+          achter?: string[]
+          actie?: string
+          afwezig?: string[]
+          formatie?: string
+          id?: never
+          keepers?: string[]
+          keepers_vast?: boolean
+          live?: Json | null
+          match_date?: string
+          match_id?: string
+          notes?: string | null
+          opponent?: string | null
+          saved_at?: string
+          team_id?: string
+          voor?: string[]
+          wissel?: string
+        }
+        Relationships: []
       }
       players: {
         Row: {

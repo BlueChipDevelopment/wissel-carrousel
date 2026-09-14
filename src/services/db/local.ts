@@ -4,7 +4,7 @@
  * Wordt gekozen in index.ts als VITE_SUPABASE_URL ontbreekt.
  */
 import { SEED_PLAYERS, SEED_TEAMS } from '@/data/seed'
-import type { DataSource, Match, MatchInput, Player, Team } from './types'
+import { ConflictError, type DataSource, type Match, type MatchInput, type Player, type Team } from './types'
 
 const KEY = 'wisselcarrousel.local.v1'
 
@@ -19,8 +19,13 @@ function lees(): Store {
     if (raw) {
       const v = JSON.parse(raw) as Partial<Store>
       if (Array.isArray(v.players) && Array.isArray(v.matches)) {
-        // Oudere opslag zonder keepers/live: aanvullen.
-        const matches = v.matches.map((m) => ({ ...m, keepers: m.keepers ?? [], live: m.live ?? null }))
+        // Oudere opslag zonder keepers/live/keepersVast: aanvullen.
+        const matches = v.matches.map((m) => ({
+          ...m,
+          keepers: m.keepers ?? [],
+          keepersVast: m.keepersVast ?? false,
+          live: m.live ?? null,
+        }))
         return { players: v.players, matches }
       }
     }
@@ -99,8 +104,12 @@ export function createLocalSource(): DataSource {
       return wacht(m ? { ...m } : null)
     },
 
-    async saveMatch(input: MatchInput) {
+    async saveMatch(input: MatchInput, verwachtUpdatedAt?: string) {
+      store = lees()
       const bestaand = store.matches.find((x) => x.teamId === input.teamId && x.date === input.date)
+      if (bestaand && verwachtUpdatedAt !== undefined && bestaand.updatedAt !== verwachtUpdatedAt) {
+        throw new ConflictError({ ...bestaand })
+      }
       const m: Match = {
         ...input,
         id: bestaand?.id ?? input.id ?? uuid(),
@@ -110,6 +119,16 @@ export function createLocalSource(): DataSource {
         ...store,
         matches: [...store.matches.filter((x) => x.id !== m.id), m],
       }
+      schrijf(store)
+      return wacht({ ...m })
+    },
+
+    async zetKeepers(id, keepers, vast) {
+      store = lees()
+      const bestaand = store.matches.find((x) => x.id === id)
+      if (!bestaand) throw new Error('keepers vastzetten: wedstrijd niet gevonden')
+      const m: Match = { ...bestaand, keepers: [...keepers], keepersVast: vast, updatedAt: new Date().toISOString() }
+      store = { ...store, matches: [...store.matches.filter((x) => x.id !== m.id), m] }
       schrijf(store)
       return wacht({ ...m })
     },

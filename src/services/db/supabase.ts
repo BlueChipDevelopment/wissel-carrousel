@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import type { Formatie, Live, WisselStand } from '@/domain/types'
-import type { DataSource, Match, MatchInput, Player, Team } from './types'
+import { ConflictError, type DataSource, type Match, type MatchInput, type Player, type Team } from './types'
 import type { Json } from '@/types/database'
 
 type Row<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
@@ -26,6 +26,7 @@ function toMatch(r: Row<'matches'>): Match {
     voor: r.voor ?? [],
     afwezig: r.afwezig ?? [],
     keepers: r.keepers ?? [],
+    keepersVast: r.keepers_vast ?? false,
     live: leesLive(r.live),
     notes: r.notes,
     updatedAt: r.updated_at,
@@ -125,7 +126,7 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
       return data ? toMatch(data) : null
     },
 
-    async saveMatch(input) {
+    async saveMatch(input, verwachtUpdatedAt) {
       const row = {
         team_id: input.teamId,
         match_date: input.date,
@@ -136,8 +137,25 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
         voor: input.voor,
         afwezig: input.afwezig,
         keepers: input.keepers,
+        keepers_vast: input.keepersVast,
         live: (input.live as unknown as Json) ?? null,
         notes: input.notes,
+      }
+      if (verwachtUpdatedAt) {
+        // Alleen opslaan over de versie heen die deze telefoon kende (optimistic locking).
+        const { data, error } = await sb
+          .from('matches')
+          .update(row)
+          .eq('team_id', input.teamId)
+          .eq('match_date', input.date)
+          .eq('updated_at', verwachtUpdatedAt)
+          .select('*')
+          .maybeSingle()
+        if (error) fail('wedstrijd opslaan', error)
+        if (data) return toMatch(data)
+        const huidig = await this.getMatch(input.teamId, input.date)
+        if (huidig) throw new ConflictError(huidig)
+        // Intussen verwijderd: dan gewoon opnieuw aanmaken.
       }
       const { data, error } = await sb
         .from('matches')
@@ -145,6 +163,17 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
         .select('*')
         .single()
       if (error) fail('wedstrijd opslaan', error)
+      return toMatch(data)
+    },
+
+    async zetKeepers(id, keepers, vast) {
+      const { data, error } = await sb
+        .from('matches')
+        .update({ keepers, keepers_vast: vast })
+        .eq('id', id)
+        .select('*')
+        .single()
+      if (error) fail('keepers vastzetten', error)
       return toMatch(data)
     },
 

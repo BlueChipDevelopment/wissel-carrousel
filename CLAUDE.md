@@ -93,7 +93,11 @@ bank per blok (plan minus wie er niet is), dan ruilen tot niemand meer dan één
 dan plekken via `vulSlots`. Zonder wijzigingen komt er bij 8 spelers precies het plan uit. De
 UI toont altijd `samengesteld(plan, live ?? nieuwLive(plan))`. Slepen in blok 1 zolang dat het
 huidige blok is (vóór de aftrap) past het plan aan (`zetOpPlekInPlan`), geen live-wissel. Live-acties slaan direct op
-(debounce) en gaan via realtime naar de andere telefoons; last-write-wins op `updated_at`.
+(debounce) en gaan via realtime naar de andere telefoons. Opslaan is optimistic locking op
+`updated_at` (`saveMatch(input, verwachtUpdatedAt)` → `ConflictError`): een telefoon met een
+oudere versie overschrijft nooit stilletjes, de coach kiest "die versie ophalen" of "toch mijn
+versie". Keepers zijn per wedstrijd achteraf te corrigeren (`keepers_vast`, pagina Wedstrijden);
+dan laat `bewaar` `keepers` staan. Elke opslag komt via trigger in `match_history`.
 
 ## Toegang (belangrijk)
 

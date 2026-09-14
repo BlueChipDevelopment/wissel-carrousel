@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTeam } from '@/App'
-import { keepersVan } from '@/domain/live'
+import { AANTAL_KWARTEN } from '@/domain/schedule'
+import { keepersVan, keepersWerkelijk, nieuwLive, past, samengesteld } from '@/domain/live'
 import { keeperTally } from '@/domain/schedule'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDate, todayISO } from '@/utils/dateUtils'
@@ -13,6 +14,8 @@ export function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [fout, setFout] = useState<string | null>(null)
   const [laden, setLaden] = useState(true)
+  /** Wedstrijd waarvan de keepers nu gecorrigeerd worden, met de gekozen keeper per kwart. */
+  const [correctie, setCorrectie] = useState<{ id: string; keepers: string[] } | null>(null)
 
   useEffect(() => {
     let live = true
@@ -34,6 +37,37 @@ export function MatchesPage() {
   const vandaag = todayISO()
   const gespeeld = useMemo(() => matches.filter((m) => m.date <= vandaag), [matches, vandaag])
   const tally = useMemo(() => keeperTally(gespeeld.map(keepersVan)), [gespeeld])
+
+  const vervang = (m: Match) => setMatches((l) => l.map((x) => (x.id === m.id ? m : x)))
+
+  const startCorrectie = (m: Match) => {
+    const k = keepersVan(m)
+    setCorrectie({ id: m.id, keepers: Array.from({ length: AANTAL_KWARTEN }, (_, q) => k[q] ?? '') })
+  }
+
+  const bewaarCorrectie = async () => {
+    if (!correctie) return
+    const keepers = correctie.keepers.filter(Boolean)
+    if (keepers.length !== AANTAL_KWARTEN) return
+    try {
+      vervang(await db.zetKeepers(correctie.id, keepers, true))
+      setCorrectie(null)
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  /** Terug naar geteld: de keepers weer afleiden uit de live-blokken (of het plan). */
+  const laatLos = async (m: Match) => {
+    const opstelling = { achter: m.achter, voor: m.voor, wissel: m.wissel, formatie: m.formatie }
+    const live = m.live && past(opstelling, m.live) ? m.live : nieuwLive(opstelling)
+    const keepers = m.live ? keepersWerkelijk(samengesteld(opstelling, live)) : []
+    try {
+      vervang(await db.zetKeepers(m.id, keepers, false))
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : String(e))
+    }
+  }
 
   const verwijder = async (m: Match) => {
     if (!window.confirm(`Wedstrijd van ${formatDate(m.date)} verwijderen?`)) return
@@ -106,8 +140,63 @@ export function MatchesPage() {
                     </Td>
                     <Td>{m.opponent ?? '–'}</Td>
                     <Td>
-                      {keepersVan(m).map(naam).join(' · ')}
-                      {m.live && <small className="ml-2 text-muted">live</small>}
+                      {correctie?.id === m.id ? (
+                        <form
+                          className="flex flex-wrap items-end gap-2"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            void bewaarCorrectie()
+                          }}
+                        >
+                          {correctie.keepers.map((k, q) => (
+                            <label key={q} className="flex flex-col gap-1">
+                              <span className="eyebrow">Kwart {q + 1}</span>
+                              <select
+                                className="field"
+                                value={k}
+                                required
+                                onChange={(e) =>
+                                  setCorrectie((c) => c && { ...c, keepers: c.keepers.map((x, i) => (i === q ? e.target.value : x)) })
+                                }
+                              >
+                                <option value="">–</option>
+                                {spelers
+                                  .filter((p) => p.active || p.id === k)
+                                  .map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                              </select>
+                            </label>
+                          ))}
+                          <button type="submit" className="btn btn-primary btn-small">
+                            Keepers opslaan
+                          </button>
+                          <button type="button" className="btn btn-small" onClick={() => setCorrectie(null)}>
+                            Annuleren
+                          </button>
+                        </form>
+                      ) : (
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span>{keepersVan(m).map(naam).join(' · ')}</span>
+                          {m.keepersVast ? (
+                            <small className="text-muted">gecorrigeerd</small>
+                          ) : (
+                            m.live && <small className="text-muted">live</small>
+                          )}
+                          {m.date <= vandaag && (
+                            <button type="button" className="text-[13px] underline" onClick={() => startCorrectie(m)}>
+                              Corrigeer
+                            </button>
+                          )}
+                          {m.keepersVast && (
+                            <button type="button" className="text-[13px] underline" onClick={() => void laatLos(m)}>
+                              Terug naar geteld
+                            </button>
+                          )}
+                        </span>
+                      )}
                     </Td>
                     <Td muted>{m.afwezig.length ? m.afwezig.map(naam).join(', ') : '–'}</Td>
                     <Td muted>{m.wissel === '5min' ? '5 min' : m.wissel === 'vrij' ? 'vrij' : 'kwart'} · {m.formatie}</Td>

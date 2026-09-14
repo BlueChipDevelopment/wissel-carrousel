@@ -17,9 +17,19 @@ eenmalig, daarna deployt elke push naar `main` automatisch.
    ```
 
    Dit draait de migrations: schema, open RLS, de seed met de vier JO8-teams, en de
-   live-stand (`matches.live`, `matches.keepers`, realtime op `matches`). Realtime moet
-   in het project aanstaan (*Database → Publications → supabase_realtime*); de migration
-   voegt `matches` aan die publicatie toe.
+   live-stand (`matches.live`, `matches.keepers`, realtime op `matches`), en de historie
+   (`match_history`, gevuld door een trigger op `matches`). Realtime moet in het project
+   aanstaan (*Database → Publications → supabase_realtime*); de migration voegt `matches`
+   aan die publicatie toe.
+
+   **Historie terugzoeken** (SQL Editor), bijvoorbeeld alle versies van één wedstrijd:
+
+   ```sql
+   select saved_at, actie, achter, keepers, live->'huidig' as huidig, live->'handmatig' as handmatig
+   from match_history
+   where match_date = '2026-09-12' and team_id = '<team-id>'
+   order by saved_at;
+   ```
 3. Haal uit *Project Settings → API* de **Project URL** en de **anon/publishable key**.
 4. Zet ze lokaal in `.env.local` (git-ignored):
 

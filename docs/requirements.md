@@ -49,7 +49,8 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 6. **Opslaan** → de wedstrijd telt vanaf de wedstrijddag mee in de keeperbeurten.
 6a. **Langs de lijn**: klok starten, slepen op het veld, uitvallers en laatkomers aangeven;
     de rest rekent mee en staat meteen op de telefoon van de andere coach (zie "Live").
-7. Wedstrijden & keeperbeurten: geschiedenis per team, teller per speler, wedstrijd verwijderen.
+7. Wedstrijden & keeperbeurten: geschiedenis per team, teller per speler, keepers per wedstrijd
+   corrigeren, wedstrijd verwijderen.
 8. Spelers: toevoegen, hernoemen, uit de selectie halen (geschiedenis blijft).
 
 ## Live tijdens de wedstrijd (v1.1)
@@ -90,10 +91,19 @@ Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast hou
 - **Tellen uit de werkelijkheid.** Speeltijd en keeperbeurten komen uit de werkelijke blokken.
   Per kwart telt elke keeper één beurt (bij een keeperswissel halverwege dus twee). De app
   schrijft ze in `matches.keepers`; oudere wedstrijden vallen terug op `achter[0..3]`.
+- **Keepers corrigeren.** Klopt de telling niet (klok niet gebruikt, verkeerd gesleept), dan
+  zet je op de pagina Wedstrijden met **Corrigeer** de keeper per kwart. De lijst staat dan vast
+  ("gecorrigeerd"): opslaan vanaf de opstellingspagina leidt hem niet opnieuw af. **Terug naar
+  geteld** haalt de correctie weer weg.
 - **Beide coaches zien hetzelfde.** Elke live-actie wordt direct opgeslagen en via Supabase
-  realtime naar de andere telefoons gestuurd; de nieuwste `updated_at` wint. Staan er op een
-  telefoon nog niet-opgeslagen planwijzigingen, dan krijgt die een melding met "Die versie
-  ophalen". Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op.
+  realtime naar de andere telefoons gestuurd. Staan er op een telefoon nog niet-opgeslagen
+  wijzigingen, dan krijgt die een melding. Opslaan gaat alleen over de versie heen die de
+  telefoon zelf als laatste zag; is een andere telefoon eerder geweest, dan wordt er niets
+  opgeslagen en kiest de coach: **Die versie ophalen** of **Toch mijn versie opslaan**. Zo kan
+  een telefoon met een oud plan de live-stand van de andere niet meer per ongeluk wegschrijven.
+  Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op.
+- **Historie.** Elke opslag (ook het stille opslaan na een live-actie) komt als rij in
+  `match_history`, met tijdstip. Daarmee is een misgelopen samenvoeging altijd terug te zoeken.
 - Wissel je van bankstand (5 min ↔ kwart) terwijl er een live-stand is, dan begint die opnieuw.
 
 ## De klok in de broekzak
