@@ -191,6 +191,16 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
     },
 
     subscribeMatch(teamId, date, cb) {
+      // Een DELETE bevat zonder REPLICA IDENTITY FULL alleen het id (en komt ook ongefilterd binnen),
+      // dus onthouden we het id van de wedstrijd op deze datum.
+      let id: string | null = null
+      this.getMatch(teamId, date)
+        .then((m) => {
+          if (m && !id) id = m.id
+        })
+        .catch(() => {
+          /* geen id: dan alleen deletes met match_date in de payload */
+        })
       // Eén filterkolom per channel; de datum checken we zelf.
       const channel = sb
         .channel(`matches:${teamId}:${date}`)
@@ -200,11 +210,16 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
           (payload) => {
             if (payload.eventType === 'DELETE') {
               const oud = payload.old as Partial<Row<'matches'>>
-              if (oud.match_date === date || oud.match_date === undefined) cb(null)
+              if (oud.match_date === date || (id !== null && oud.id === id)) {
+                id = null
+                cb(null)
+              }
               return
             }
             const r = payload.new as Row<'matches'>
-            if (r.match_date === date) cb(toMatch(r))
+            if (r.match_date !== date) return
+            id = r.id
+            cb(toMatch(r))
           },
         )
         .subscribe()

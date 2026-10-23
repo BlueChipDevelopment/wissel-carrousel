@@ -172,7 +172,8 @@ export function TeamPage() {
   const sch = useMemo(() => (draft && live ? samengesteld(draft.opstelling, live) : []), [draft, live])
   const vijf = draft ? vijfMinuten(draft.opstelling.wissel) : false
   const vrij = draft?.opstelling.wissel === 'vrij'
-  const aanwezigIds = draft ? [...draft.opstelling.achter, ...draft.opstelling.voor] : []
+  const opstelling = draft?.opstelling
+  const aanwezigIds = useMemo(() => (opstelling ? [...opstelling.achter, ...opstelling.voor] : []), [opstelling])
   const mins = useMemo(() => minuten(sch, aanwezigIds), [sch, aanwezigIds])
   const uniekeMinuten = new Set(aanwezigIds.map((p) => mins[p]))
 
