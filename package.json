@@ -12,6 +12,7 @@
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
     "test:e2e": "playwright test",
+    "test:e2e:db": "playwright test --config=playwright.db.config.ts",
     "audio": "node scripts/maak-kwartaudio.mjs"
   },
   "dependencies": {

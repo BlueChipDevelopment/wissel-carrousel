@@ -18,13 +18,16 @@ keeperbeurten gedeeld moeten worden over telefoons en coaches heen.
 - **React 19 + Vite 7 + TypeScript**, SPA. **Tailwind 4** (config in `src/index.css` via `@theme`).
 - **Supabase** (Postgres + RLS) — Chris' account. Nog **geen login** (zie ADR-0001).
 - **Netlify** — statische SPA, auto-deploy vanuit GitHub. **PWA** via `vite-plugin-pwa`.
-- Tests: **Vitest** (domeinlogica volledig unit-getest) en **Playwright** (`e2e/`, demo-stand, desktop + 390 px).
+- Tests: **Vitest** (domeinlogica volledig unit-getest) en **Playwright**: `e2e/` in de demo-stand
+  (desktop + 390 px) en `e2e/db/` tegen de echte Supabase in sandboxteam "E2E" (`is_test`). Zie
+  [`docs/testing.md`](docs/testing.md).
 
 ## Lees hierna
 
 1. [`docs/requirements.md`](docs/requirements.md) — wat de app doet en de rekenregels
 2. [`docs/decisions/0001-stack.md`](docs/decisions/0001-stack.md) — stack, geen login, upgradepad
 3. [`docs/deploy.md`](docs/deploy.md) — Supabase + Netlify inrichten
+4. [`docs/testing.md`](docs/testing.md) — unit, demo-e2e en de database-suite
 
 ## Commands
 
@@ -34,6 +37,7 @@ npm run dev         # http://localhost:5173 — zonder .env.local in demo-stand
 npm run build       # tsc -b && vite build -> dist/
 npm test            # vitest run (domeinlogica)
 npm run test:e2e    # playwright, in de demo-stand (eerst: npx playwright install chromium)
+npm run test:e2e:db # playwright tegen de echte Supabase, sandboxteam E2E (service-role key in .env.local)
 npm run audio       # public/kwart.mp3 opnieuw genereren (het kwart-geluid van de klok)
 npm run db:push     # supabase db push (gekoppeld project)
 npm run db:types    # database.ts opnieuw genereren na een schemawijziging

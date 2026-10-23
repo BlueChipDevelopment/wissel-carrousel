@@ -7,6 +7,8 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // e2e/db draait tegen de echte Supabase: aparte config (playwright.db.config.ts).
+  testIgnore: 'db/**',
   timeout: 30_000,
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,

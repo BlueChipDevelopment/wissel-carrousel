@@ -46,6 +46,17 @@ function leesLive(v: unknown): Live | null {
   }
 }
 
+/** localStorage-vlag van de e2e-suite: dan staan teams met is_test er ook tussen. */
+export const TESTTEAMS_VLAG = 'wisselcarrousel.testteams'
+
+function toonTestTeams(): boolean {
+  try {
+    return localStorage.getItem(TESTTEAMS_VLAG) === '1'
+  } catch {
+    return false
+  }
+}
+
 function fail(context: string, error: { message: string } | null): never {
   throw new Error(`${context}: ${error?.message ?? 'onbekende fout'}`)
 }
@@ -59,7 +70,10 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
     async listTeams() {
       const { data, error } = await sb.from('teams').select('*').order('sort_order')
       if (error) fail('teams laden', error)
-      return (data ?? []).map(toTeam)
+      // Het e2e-sandboxteam alleen met de testvlag. In de browser gefilterd (niet in de query),
+      // zodat dit ook werkt zolang de kolom is_test nog niet bestaat.
+      const metTest = toonTestTeams()
+      return (data ?? []).filter((r) => metTest || r.is_test !== true).map(toTeam)
     },
 
     async listPlayers(teamId) {
@@ -191,23 +205,28 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
     },
 
     subscribeMatch(teamId, date, cb, matchId) {
-      // Een DELETE bevat zonder REPLICA IDENTITY FULL alleen het id (en komt ongefilterd binnen,
-      // dus ook van andere teams): herkennen op het id van de wedstrijd op deze datum.
+      // Een DELETE bevat zonder REPLICA IDENTITY FULL alleen het id, en komt van alle teams
+      // binnen: herkennen op het id van de wedstrijd op deze datum.
       let id: string | null = matchId ?? null
-      // Eén filterkolom per channel; de datum checken we zelf.
+      const verwijderd = (oud: Partial<Row<'matches'>>) => {
+        const zelfde = id !== null ? oud.id === id : oud.team_id === teamId && oud.match_date === date
+        if (!zelfde) return
+        id = null
+        cb(null)
+      }
+      // Eén filterkolom per channel; de datum checken we zelf. Een DELETE komt niet door een
+      // filter heen (Supabase kan deletes niet filteren), dus die luistert apart, ongefilterd.
       const channel = sb
         .channel(`matches:${teamId}:${date}`)
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'matches' }, (payload) =>
+          verwijderd(payload.old as Partial<Row<'matches'>>),
+        )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'matches', filter: `team_id=eq.${teamId}` },
           (payload) => {
             if (payload.eventType === 'DELETE') {
-              const oud = payload.old as Partial<Row<'matches'>>
-              const zelfde = id !== null ? oud.id === id : oud.team_id === teamId && oud.match_date === date
-              if (zelfde) {
-                id = null
-                cb(null)
-              }
+              verwijderd(payload.old as Partial<Row<'matches'>>)
               return
             }
             const r = payload.new as Row<'matches'>

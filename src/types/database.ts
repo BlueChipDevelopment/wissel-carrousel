@@ -173,6 +173,7 @@ export type Database = {
           club: string | null
           created_at: string
           id: string
+          is_test: boolean
           name: string
           season: string | null
           slug: string
@@ -182,6 +183,7 @@ export type Database = {
           club?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           name: string
           season?: string | null
           slug: string
@@ -191,6 +193,7 @@ export type Database = {
           club?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           name?: string
           season?: string | null
           slug?: string
