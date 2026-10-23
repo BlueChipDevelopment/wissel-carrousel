@@ -70,3 +70,22 @@ test('twee telefoons: de eerste opslag wint, overschrijven alleen bewust', async
   await b.reload()
   await expect(b.getByRole('region', { name: 'Wie is er?' })).toContainText('afwezig: Adam')
 })
+
+test('twee telefoons met een nieuwe wedstrijd: ook dan gaat de tweede er niet stilletjes overheen', async ({ context }) => {
+  const a = await context.newPage()
+  await a.goto(`/team/jo8-1?datum=${vandaag()}`)
+  await expect(a.getByText('Demo-stand.')).toBeVisible()
+  await a.getByRole('region', { name: 'Wie is er?' }).getByRole('button', { name: 'Adam', pressed: true }).click()
+
+  const b = await context.newPage()
+  await b.goto(`/team/jo8-1?datum=${vandaag()}`)
+  await expect(b.getByText('Demo-stand.')).toBeVisible()
+  await b.getByRole('region', { name: 'Wie is er?' }).getByRole('button', { name: 'Sara', pressed: true }).click()
+  await b.getByRole('button', { name: 'Wedstrijd opslaan' }).click()
+  await expect(b.getByText(/^Opgeslagen voor/)).toBeVisible()
+
+  await a.getByRole('button', { name: 'Wedstrijd opslaan' }).click()
+  await expect(a.getByText('Niet opgeslagen: een andere telefoon was eerder.')).toBeVisible()
+  await b.reload()
+  await expect(b.getByRole('region', { name: 'Wie is er?' })).toContainText('afwezig: Sara')
+})

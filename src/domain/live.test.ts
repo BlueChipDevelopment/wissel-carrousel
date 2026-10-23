@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   beschikbaar,
   herbereken,
+  keeperPerKwart,
+  keepersGeteld,
   keepersWerkelijk,
   laatLos,
   nieuwLive,
@@ -385,5 +387,34 @@ describe('vrije wissels in de live-stand', () => {
     const live = wisselPlek(VRIJ, start, 3, zit, staat)
     const { sch } = controleer(VRIJ, live)
     expect(sch[3].verdedigers[i]).toBe(zit)
+  })
+})
+
+describe('keepers per kwart (corrigeren)', () => {
+  const wedstrijd = (live: Live | null, keepers: string[] = [], keepersVast = false) => ({
+    ...JO8,
+    live,
+    keepers,
+    keepersVast,
+  })
+
+  it('een keeperswissel halverwege een kwart schuift de latere kwarten niet op', () => {
+    const live = wisselPlek(JO8, zetHuidig(nieuwLive(JO8), 3), 3, 'Floris', 'Sara')
+    const geteld = keepersGeteld(JO8, live)
+    expect(geteld).toEqual(['Mees', 'Sara', 'Floris', 'Christopher', 'Sara'])
+    // Per kwart wie het kwart begon; niet de platte lijst op index.
+    expect(keeperPerKwart(wedstrijd(live, geteld))).toEqual(['Mees', 'Sara', 'Christopher', 'Sara'])
+  })
+
+  it('gecorrigeerde keepers blijven zoals de coach ze zette', () => {
+    const vast = ['Julan', 'Adam', 'Guus', 'Christopher']
+    expect(keeperPerKwart(wedstrijd(null, vast, true))).toEqual(vast)
+  })
+
+  it('zonder live-stand: het plan, net als bij het opslaan', () => {
+    expect(keepersGeteld(JO8, null)).toEqual(JO8.achter)
+    expect(keeperPerKwart(wedstrijd(null))).toEqual(JO8.achter)
+    const drie: Opstelling = { ...KWART, achter: ['Mees', 'Sara', 'Christopher'] }
+    expect(keepersGeteld(drie, null)).toEqual(['Mees', 'Sara', 'Christopher', 'Mees'])
   })
 })

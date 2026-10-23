@@ -35,3 +35,25 @@ test('vrije wissels: keepers vast, de rest zonder linies, iedereen op 30', async
   const minuten = (await chips.allInnerTexts()).map((t) => Number(t.match(/(\d+)'/)?.[1]))
   expect(minuten).toEqual(Array(8).fill(30))
 })
+
+/** Een speler die er na het opslaan bij komt (gastspeler, nieuw kind) staat eerst op afwezig. */
+test('nieuwe speler bij een al opgeslagen wedstrijd: eerst afwezig, aantikken en hij speelt mee', async ({ page }) => {
+  await page.goto('/team/jo8-1')
+  await expect(page.getByText('Demo-stand.')).toBeVisible()
+  await page.getByRole('button', { name: 'Wedstrijd opslaan' }).click()
+  await expect(page.getByText(/^Opgeslagen voor/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Spelers' }).click()
+  await page.getByPlaceholder('Nieuwe speler (voornaam)').fill('Gast')
+  await page.getByRole('button', { name: 'Toevoegen' }).click()
+  await expect(page.getByText('Gast', { exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Opstelling' }).click()
+  const paneel = page.getByRole('region', { name: 'Wie is er?' })
+  await expect(paneel).toContainText('8 van 9 erbij')
+  await expect(paneel).toContainText('afwezig: Gast')
+
+  await paneel.getByRole('button', { name: 'Gast', pressed: false }).click()
+  await expect(paneel).toContainText('9 van 9 erbij')
+  await expect(page.locator('section:has-text("Speeltijd") .chip').filter({ hasText: 'Gast' })).toHaveCount(1)
+})

@@ -104,7 +104,7 @@ export function createLocalSource(): DataSource {
       return wacht(m ? { ...m } : null)
     },
 
-    async saveMatch(input: MatchInput, verwachtUpdatedAt?: string) {
+    async saveMatch(input: MatchInput, verwachtUpdatedAt?: string | null) {
       store = lees()
       const bestaand = store.matches.find((x) => x.teamId === input.teamId && x.date === input.date)
       if (bestaand && verwachtUpdatedAt !== undefined && bestaand.updatedAt !== verwachtUpdatedAt) {

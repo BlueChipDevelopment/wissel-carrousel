@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTeam } from '@/App'
 import { AANTAL_KWARTEN } from '@/domain/schedule'
-import { keepersVan, keepersWerkelijk, nieuwLive, past, samengesteld } from '@/domain/live'
+import { keeperPerKwart, keepersGeteld, keepersVan } from '@/domain/live'
 import { keeperTally } from '@/domain/schedule'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDate, todayISO } from '@/utils/dateUtils'
@@ -41,8 +41,7 @@ export function MatchesPage() {
   const vervang = (m: Match) => setMatches((l) => l.map((x) => (x.id === m.id ? m : x)))
 
   const startCorrectie = (m: Match) => {
-    const k = keepersVan(m)
-    setCorrectie({ id: m.id, keepers: Array.from({ length: AANTAL_KWARTEN }, (_, q) => k[q] ?? '') })
+    setCorrectie({ id: m.id, keepers: keeperPerKwart(m) })
   }
 
   const bewaarCorrectie = async () => {
@@ -59,9 +58,7 @@ export function MatchesPage() {
 
   /** Terug naar geteld: de keepers weer afleiden uit de live-blokken (of het plan). */
   const laatLos = async (m: Match) => {
-    const opstelling = { achter: m.achter, voor: m.voor, wissel: m.wissel, formatie: m.formatie }
-    const live = m.live && past(opstelling, m.live) ? m.live : nieuwLive(opstelling)
-    const keepers = m.live ? keepersWerkelijk(samengesteld(opstelling, live)) : []
+    const keepers = keepersGeteld(m, m.live)
     try {
       vervang(await db.zetKeepers(m.id, keepers, false))
     } catch (e) {

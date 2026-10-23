@@ -12,9 +12,9 @@ import { ScheduleTable } from '@/components/ScheduleTable'
 import { SEED_START_JO8_1 } from '@/data/seed'
 import {
   keepersVan,
-  keepersWerkelijk,
+  keepersGeteld,
   laatLos,
-  nieuwLive,
+  liveBij,
   past,
   samengesteld,
   vanPlan,
@@ -53,7 +53,7 @@ interface Snapshot {
 
 /** De live-stand die geldt: de opgeslagen, of anders het (eerlijk gemaakte) plan. */
 function liveVan(d: Draft): Live {
-  return d.live && past(d.opstelling, d.live) ? d.live : nieuwLive(d.opstelling)
+  return liveBij(d.opstelling, d.live)
 }
 
 /** Opstelling van één wedstrijd: instellen, bekijken langs de lijn, live aanpassen, opslaan. */
@@ -222,7 +222,8 @@ export function TeamPage() {
       if (!stil) setStatus('Bezig…')
       setFout(null)
       try {
-        const verwacht = !forceer && d.id && laatstBewaard.current ? laatstBewaard.current : undefined
+        // Bekende versie: alleen daaroverheen. Nog geen id: alleen aanmaken als niemand ons voor was.
+        const verwacht = forceer ? undefined : d.id ? laatstBewaard.current || undefined : null
         const saved = await db.saveMatch(
           {
             id: d.id,
@@ -234,7 +235,7 @@ export function TeamPage() {
             achter: d.opstelling.achter,
             voor: d.opstelling.voor,
             afwezig: d.afwezig,
-            keepers: d.keepersVast ? d.keepers : keepersWerkelijk(samengesteld(d.opstelling, liveVan(d))),
+            keepers: d.keepersVast ? d.keepers : keepersGeteld(d.opstelling, d.live),
             keepersVast: d.keepersVast,
             live: d.live,
             notes: null,
@@ -595,14 +596,18 @@ function Feit({ b, s, laatste }: { b: string; s: string; laatste?: boolean }) {
 
 /** Draft uit een opgeslagen wedstrijd; spelers die niet (meer) bestaan vallen weg. */
 function draftVanMatch(m: Match, spelers: Player[]): Draft {
-  const ids = new Set(spelers.filter((p) => p.active).map((p) => p.id))
+  const actief = spelers.filter((p) => p.active).map((p) => p.id)
+  const ids = new Set(actief)
   const geldig = (l: string[]) => l.filter((id) => ids.has(id))
+  // Wie er na het opslaan bij kwam (gastspeler, nieuw kind) staat eerst op afwezig: aantikken bij "Wie is er?".
+  const bekend = new Set([...m.achter, ...m.voor, ...m.afwezig])
+  const nieuw = actief.filter((id) => !bekend.has(id))
   return {
     id: m.id,
     date: m.date,
     opponent: m.opponent ?? '',
     opstelling: { achter: geldig(m.achter), voor: geldig(m.voor), wissel: m.wissel, formatie: m.formatie },
-    afwezig: geldig(m.afwezig),
+    afwezig: [...geldig(m.afwezig), ...nieuw],
     live: m.live,
     keepers: m.keepers,
     keepersVast: m.keepersVast,

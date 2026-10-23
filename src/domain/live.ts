@@ -407,6 +407,26 @@ export function keepersVan(m: { keepers: string[]; achter: string[] }): string[]
   return m.keepers.length ? m.keepers : m.achter.slice(0, AANTAL_KWARTEN)
 }
 
+/** De live-stand bij een plan; zonder (passende) stand een nieuwe, zodat het plan zelf telt. */
+export function liveBij(plan: Opstelling, live: Live | null): Live {
+  return live && past(plan, live) ? live : nieuwLive(plan)
+}
+
+/** Keepers zoals de app ze bij het opslaan telt: uit de live-stand, anders uit het plan. */
+export function keepersGeteld(plan: Opstelling, live: Live | null): string[] {
+  return keepersWerkelijk(samengesteld(plan, liveBij(plan, live)))
+}
+
+/**
+ * Eén keeper per kwart, voor het corrigeren: de gecorrigeerde lijst als die vaststaat, anders
+ * wie het kwart begon. Niet `keepers[q]`: bij een keeperswissel halverwege staan er daar meer dan vier.
+ */
+export function keeperPerKwart(m: Opstelling & { live: Live | null; keepers: string[]; keepersVast: boolean }): string[] {
+  if (m.keepersVast && m.keepers.length === AANTAL_KWARTEN) return m.keepers
+  const sch = samengesteld(m, liveBij(m, m.live))
+  return Array.from({ length: AANTAL_KWARTEN }, (_, q) => sch.find((b) => b.kwart === q)?.keeper ?? '')
+}
+
 /** Keepers zoals echt gespeeld: per kwart elke (onderscheiden) keeper één beurt. */
 export function keepersWerkelijk(sch: Blok[]): string[] {
   const out: string[] = []

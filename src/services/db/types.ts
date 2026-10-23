@@ -72,10 +72,11 @@ export interface DataSource {
   getMatch(teamId: string, date: string): Promise<Match | null>
   /**
    * Upsert op (team, datum). Met `verwachtUpdatedAt` slaat hij alleen op als de bestaande rij
-   * nog die versie heeft; anders ConflictError met de nieuwere versie. Zonder: altijd opslaan
-   * (nieuwe wedstrijd, of bewust overschrijven).
+   * nog die versie heeft; anders ConflictError met de nieuwere versie. `null` = een nieuwe
+   * wedstrijd: staat er intussen al een, dan ook ConflictError. Zonder: altijd opslaan (bewust
+   * overschrijven).
    */
-  saveMatch(input: MatchInput, verwachtUpdatedAt?: string): Promise<Match>
+  saveMatch(input: MatchInput, verwachtUpdatedAt?: string | null): Promise<Match>
   /** Keepers per kwart vastzetten (`vast` = true) of weer laten afleiden (`vast` = false). */
   zetKeepers(id: string, keepers: string[], vast: boolean): Promise<Match>
   deleteMatch(id: string): Promise<void>

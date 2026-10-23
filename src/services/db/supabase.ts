@@ -157,6 +157,14 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
         if (huidig) throw new ConflictError(huidig)
         // Intussen verwijderd: dan gewoon opnieuw aanmaken.
       }
+      if (verwachtUpdatedAt === null) {
+        // Nieuwe wedstrijd: alleen aanmaken, niet over een versie van een andere telefoon heen.
+        const { data, error } = await sb.from('matches').insert(row).select('*').single()
+        if (!error) return toMatch(data)
+        if (error.code !== '23505') fail('wedstrijd opslaan', error)
+        const huidig = await this.getMatch(input.teamId, input.date)
+        if (huidig) throw new ConflictError(huidig)
+      }
       const { data, error } = await sb
         .from('matches')
         .upsert(row, { onConflict: 'team_id,match_date' })
