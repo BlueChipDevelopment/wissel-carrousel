@@ -192,3 +192,22 @@ test('een sleep die nog niet gedeeld is, raakt niet stil kwijt als een andere te
   await expect(a.getByText('Een andere telefoon heeft deze wedstrijd intussen aangepast.')).toBeVisible()
   await expect(a.getByText('Bijgewerkt vanaf een andere telefoon.')).toHaveCount(0)
 })
+
+test('verwijderd op een andere telefoon: melding, en een sleep zet hem niet stil terug', async ({ context }) => {
+  const a = await context.newPage()
+  await openTeam(a)
+  await a.getByRole('button', { name: 'Wedstrijd opslaan' }).click()
+  await expect(a.getByText(/^Opgeslagen voor/)).toBeVisible()
+
+  const b = await context.newPage()
+  await b.goto('/team/jo8-1/wedstrijden')
+  b.once('dialog', (d) => void d.accept())
+  await b.getByRole('button', { name: /verwijder/i }).first().click()
+
+  await expect(a.getByText('Deze wedstrijd is op een andere telefoon verwijderd.', { exact: false })).toBeVisible()
+  await sleep(a, PLEK.bank0, PLEK.verdedigerLinks)
+  await a.waitForTimeout(800)
+  const aantal = await a.evaluate(() => JSON.parse(localStorage.getItem('wisselcarrousel.local.v1')!).matches.length)
+  expect(aantal).toBe(0)
+  await expect(a.getByRole('button', { name: 'Wedstrijd opslaan' })).toBeEnabled()
+})

@@ -83,6 +83,7 @@ export interface DataSource {
   /**
    * Meldt elke wijziging aan de wedstrijd van dit team op deze datum door een andere
    * telefoon (null = verwijderd). Last-write-wins: de ontvanger vergelijkt `updatedAt`.
+   * `matchId` = de wedstrijd die de ontvanger al kent; daaraan herkennen we een verwijdering.
    */
-  subscribeMatch(teamId: string, date: string, cb: (m: Match | null) => void): Unsubscribe
+  subscribeMatch(teamId: string, date: string, cb: (m: Match | null) => void, matchId?: string): Unsubscribe
 }

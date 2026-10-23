@@ -4,8 +4,10 @@
 -- werd een historierij met de hele live-stand. Twee aanpassingen:
 --
 -- 1. Een update die niets verandert behalve updated_at levert geen historierij meer op.
--- 2. Per wedstrijd blijven de nieuwste 200 versies staan; ruim genoeg voor één wedstrijddag
---    met live-wissels, en de oudere zijn na een samenvoegfout niet meer nodig.
+-- 2. Per wedstrijd blijven de nieuwste 200 versies staan. Een drukke wedstrijd met twee
+--    telefoons is zo'n 80 opslagen (blokken van de klok, slepen, undo), dus dat is ruim.
+
+create index if not exists match_history_match_id_idx on public.match_history (match_id, id desc);
 
 create or replace function public.log_match_history()
 returns trigger
@@ -49,11 +51,8 @@ create trigger matches_log_history_insert_delete
 create trigger matches_log_history_update
   after update on public.matches
   for each row
-  when ((old.match_date, old.opponent, old.wissel, old.formatie, old.achter, old.voor, old.afwezig,
-         old.keepers, old.keepers_vast, old.live, old.notes)
-        is distinct from
-        (new.match_date, new.opponent, new.wissel, new.formatie, new.achter, new.voor, new.afwezig,
-         new.keepers, new.keepers_vast, new.live, new.notes))
+  -- Alle kolommen behalve updated_at, ook die er later bij komen.
+  when ((to_jsonb(old) - 'updated_at') is distinct from (to_jsonb(new) - 'updated_at'))
   execute function public.log_match_history();
 
 -- Bestaande historie meteen terugbrengen tot de nieuwste 200 per wedstrijd.

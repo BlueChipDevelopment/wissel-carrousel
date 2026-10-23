@@ -190,17 +190,10 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
       if (error) fail('wedstrijd verwijderen', error)
     },
 
-    subscribeMatch(teamId, date, cb) {
-      // Een DELETE bevat zonder REPLICA IDENTITY FULL alleen het id (en komt ook ongefilterd binnen),
-      // dus onthouden we het id van de wedstrijd op deze datum.
-      let id: string | null = null
-      this.getMatch(teamId, date)
-        .then((m) => {
-          if (m && !id) id = m.id
-        })
-        .catch(() => {
-          /* geen id: dan alleen deletes met match_date in de payload */
-        })
+    subscribeMatch(teamId, date, cb, matchId) {
+      // Een DELETE bevat zonder REPLICA IDENTITY FULL alleen het id (en komt ongefilterd binnen,
+      // dus ook van andere teams): herkennen op het id van de wedstrijd op deze datum.
+      let id: string | null = matchId ?? null
       // Eén filterkolom per channel; de datum checken we zelf.
       const channel = sb
         .channel(`matches:${teamId}:${date}`)
@@ -210,14 +203,22 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
           (payload) => {
             if (payload.eventType === 'DELETE') {
               const oud = payload.old as Partial<Row<'matches'>>
-              if (oud.match_date === date || (id !== null && oud.id === id)) {
+              const zelfde = id !== null ? oud.id === id : oud.team_id === teamId && oud.match_date === date
+              if (zelfde) {
                 id = null
                 cb(null)
               }
               return
             }
             const r = payload.new as Row<'matches'>
-            if (r.match_date !== date) return
+            if (r.match_date !== date) {
+              // Naar een andere datum verplaatst: op deze datum is hij weg.
+              if (id !== null && r.id === id) {
+                id = null
+                cb(null)
+              }
+              return
+            }
             id = r.id
             cb(toMatch(r))
           },

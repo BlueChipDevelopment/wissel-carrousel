@@ -96,6 +96,8 @@ export function TeamPage() {
   /** Lopende opslagen. Realtime-berichten die intussen binnenkomen (vaak onze eigen echo) wachten. */
   const bezig = useRef(0)
   const uitgesteld = useRef<Match | null>(null)
+  /** Op een andere telefoon verwijderd: geen stille opslag meer tot de coach zelf opslaat. */
+  const verwijderd = useRef(false)
 
   const naam = useCallback((id: string) => spelers.find((p) => p.id === id)?.name ?? '?', [spelers])
 
@@ -103,6 +105,7 @@ export function TeamPage() {
     setDraft(d)
     laatstBewaard.current = updatedAt
     gedeeld.current = wijzigingen.current
+    verwijderd.current = false
     zetDirty(false)
     setUndo([])
     setDiff([])
@@ -154,19 +157,44 @@ export function TeamPage() {
     setStatus('Bijgewerkt vanaf een andere telefoon.')
   }, [])
 
+  /**
+   * Op een andere telefoon verwijderd. Hier blijft hij staan als nieuwe, niet opgeslagen wedstrijd;
+   * live-acties delen hem niet stilletjes opnieuw, dat doet de coach zelf met opslaan.
+   */
+  const verwijderdElders = useCallback(() => {
+    const id = draftRef.current?.id
+    if (!id) return
+    laatstBewaard.current = ''
+    verwijderd.current = true
+    setMatches((l) => l.filter((x) => x.id !== id))
+    setDraft((x) => (x && x.id === id ? { ...x, id: undefined } : x))
+    zetDirty(true)
+    setRemote(null)
+    setStatus('Deze wedstrijd is op een andere telefoon verwijderd. Opslaan zet hem er opnieuw in.')
+  }, [zetDirty])
+
   // Realtime: dezelfde wedstrijd op een andere telefoon.
   const datum = draft?.date
+  const matchId = draft?.id
   useEffect(() => {
     if (!datum) return
-    return db.subscribeMatch(team.id, datum, (m) => {
-      if (!m) return
-      if (bezig.current) {
-        if (!uitgesteld.current || m.updatedAt > uitgesteld.current.updatedAt) uitgesteld.current = m
-        return
-      }
-      ontvang(m)
-    })
-  }, [team.id, datum, ontvang])
+    return db.subscribeMatch(
+      team.id,
+      datum,
+      (m) => {
+        if (!m) {
+          verwijderdElders()
+          return
+        }
+        if (bezig.current) {
+          if (!uitgesteld.current || m.updatedAt > uitgesteld.current.updatedAt) uitgesteld.current = m
+          return
+        }
+        ontvang(m)
+      },
+      matchId,
+    )
+  }, [team.id, datum, matchId, ontvang, verwijderdElders])
 
   const live = useMemo(() => (draft ? liveVan(draft) : null), [draft])
   const sch = useMemo(() => (draft && live ? samengesteld(draft.opstelling, live) : []), [draft, live])
@@ -247,6 +275,8 @@ export function TeamPage() {
     async (stil: boolean, forceer = false) => {
       const d = draftRef.current
       if (!d) return
+      if (stil && verwijderd.current) return
+      verwijderd.current = false
       if (!stil) setStatus('Bezig…')
       setFout(null)
       const bij = wijzigingen.current
