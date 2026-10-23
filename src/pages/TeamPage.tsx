@@ -25,8 +25,8 @@ import {
   zetOpPlekInPlan,
 } from '@/domain/live'
 import { AttendancePanel } from '@/components/AttendancePanel'
-import { hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig, vijfMinuten } from '@/domain/schedule'
-import type { Beschikbaarheid, Doel, Live, Opstelling, Verschil } from '@/domain/types'
+import { WISSEL_STANDEN, hussel, keeperTally, minuten, standaardVerdeling, toggleAanwezig, vijfMinuten } from '@/domain/schedule'
+import type { Beschikbaarheid, Doel, Live, Opstelling, Verschil, WisselStand } from '@/domain/types'
 import { ConflictError, db, type Match, type Player } from '@/services/db'
 import { formatDateShort, nextSaturdayISO, todayISO } from '@/utils/dateUtils'
 
@@ -368,9 +368,9 @@ export function TeamPage() {
               className={`inline-flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full border font-display text-[14px] font-bold ${
                 regelsOpen ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-sunk text-muted'
               }`}
-              aria-label="Spelregels JO8"
+              aria-label="Spelregels en wisselregels"
               aria-expanded={regelsOpen}
-              title="Spelregels JO8"
+              title="Spelregels en wisselregels"
               onClick={() => setRegelsOpen((o) => !o)}
             >
               i
@@ -378,11 +378,14 @@ export function TeamPage() {
           </div>
         </div>
         {regelsOpen && (
-          <div className="-mx-4 -mb-4 flex flex-wrap border-t border-line" role="region" aria-label="Spelregels JO8">
-            <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
-            <Feit b="6 tegen 6" s="keeper + 5" />
-            <Feit b="42,5 × 30 m" s="kwartveld" />
-            <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
+          <div className="-mx-4 -mb-4 border-t border-line" role="region" aria-label="Spelregels en wisselregels">
+            <div className="flex flex-wrap">
+              <Feit b="4 × 10 min" s="2 × 20, time-out halverwege" />
+              <Feit b="6 tegen 6" s="keeper + 5" />
+              <Feit b="42,5 × 30 m" s="kwartveld" />
+              <Feit b={uniekeMinuten.size === 1 ? `${[...uniekeMinuten][0]} min` : 'wisselend'} s="speeltijd per speler" laatste />
+            </div>
+            <WisselRegels wissel={draft.opstelling.wissel} />
           </div>
         )}
         {fout && <p className="text-[14px] text-voor">{fout}</p>}
@@ -532,29 +535,51 @@ export function TeamPage() {
       />
 
       {kanTonen && <MinutesList blokken={sch} opstelling={draft.opstelling} naam={naam} />}
+    </div>
+  )
+}
 
-      <footer className="border-t border-line pt-4 text-[13.5px] text-muted">
-        {vrij ? (
+/** Hoe de app wisselt in de gekozen stand; achter het i'tje in de wedstrijdkop. */
+function WisselRegels({ wissel }: { wissel: WisselStand }) {
+  const linies = wissel !== 'vrij'
+  return (
+    <div className="border-t border-line px-[14px] py-[11px] text-[13.5px] text-muted">
+      <div className="eyebrow mb-[6px]">Zo wisselt de app — {WISSEL_STANDEN.find((w) => w.value === wissel)?.label}</div>
+      <ul className="list-disc space-y-1 pl-[18px]">
+        {wissel === 'vrij' ? (
           <>
-            <b>Vrij:</b> de keepers staan vast; de bank rouleert over iedereen, één keer per helft, en niemand zit vlak
-            vóór of ná zijn keepersbeurt. Wie erin komt neemt de plek over van wie eruit gaat, ook verdediger ↔
-            aanvaller. Iedereen komt op 30 minuten uit.
+            <li>Geen linies: de keeperlijst staat vast, de rest speelt overal.</li>
+            <li>De bank rouleert over iedereen, één keer per helft, en niemand zit vlak vóór of ná zijn keepersbeurt.</li>
+            <li>Wie erin komt neemt de plek over van wie eruit gaat, ook verdediger ↔ aanvaller.</li>
           </>
-        ) : vijf ? (
+        ) : wissel === '5min' ? (
           <>
-            <b>Achterin:</b> niemand zit op de bank in het blokje vlak vóór of vlak ná zijn keepersbeurt — anders sta
-            je 15 minuten achter elkaar stil. Je gaat dus warm het doel in en warm het veld weer op. Voorin schuift
-            de wissel elke 5 minuten door. Iedereen komt op 30 minuten uit.
+            <li>Twee linies: 4 achterin (keeper, 2 verdedigers, 1 wissel) en 4 voorin (3 op het veld, 1 wissel).</li>
+            <li>De 4 achterin keepen elk één kwart, in de volgorde van de lijst.</li>
+            <li>
+              Niemand zit op de bank in het blokje vlak vóór of ná zijn keepersbeurt — je gaat warm het doel in en warm
+              het veld weer op — en niemand zit twee blokjes achter elkaar.
+            </li>
+            <li>Voorin schuift de wissel elke 5 minuten door. Wie erin komt neemt de plek over van wie eruit gaat.</li>
           </>
         ) : (
           <>
-            <b>De regel achterin:</b> keeper geweest → volgend kwart de bank in → twee kwarten verdediger → weer
-            keeper. Voorin schuift de wissel per kwart door.
+            <li>Twee linies: 4 achterin (keeper, 2 verdedigers, 1 wissel) en 4 voorin (3 op het veld, 1 wissel).</li>
+            <li>Achterin: keeper geweest → volgend kwart de bank in → twee kwarten verdediger → weer keeper.</li>
+            <li>Voorin schuift de wissel per kwart door. Wie erin komt neemt de plek over van wie eruit gaat.</li>
           </>
-        )}{' '}
-        Wijk je tijdens de wedstrijd af (slepen, uitvaller), dan rekent de app de rest zo eerlijk mogelijk door;
-        speeltijd en keeperbeurten tellen wat er echt gespeeld is.
-      </footer>
+        )}
+        <li>Met 8 spelers speelt iedereen 30 minuten.</li>
+        <li>
+          Wijk je tijdens de wedstrijd af (slepen, uitvaller), dan rekent de app de rest zo eerlijk mogelijk door;
+          speeltijd en keeperbeurten tellen wat er echt gespeeld is.
+        </li>
+      </ul>
+      {linies && (
+        <p className="mt-[8px]">
+          Liever zonder vaste linies? Kies bij <b>Bankbeurten</b> de stand <b>Vrij</b>.
+        </p>
+      )}
     </div>
   )
 }
