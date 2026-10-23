@@ -28,6 +28,8 @@ function toMatch(r: Row<'matches'>): Match {
     keepers: r.keepers ?? [],
     keepersVast: r.keepers_vast ?? false,
     live: leesLive(r.live),
+    goalsVoor: r.goals_voor ?? null,
+    goalsTegen: r.goals_tegen ?? null,
     notes: r.notes,
     updatedAt: r.updated_at,
   }
@@ -197,6 +199,33 @@ export function createSupabaseSource(url: string, anonKey: string): DataSource {
         .single()
       if (error) fail('keepers vastzetten', error)
       return toMatch(data)
+    },
+
+    async zetUitslag(id, uitslag) {
+      const { data, error } = await sb
+        .from('matches')
+        .update({ goals_voor: uitslag?.voor ?? null, goals_tegen: uitslag?.tegen ?? null })
+        .eq('id', id)
+        .select('*')
+        .single()
+      if (error) fail('uitslag opslaan', error)
+      return toMatch(data)
+    },
+
+    async listUitslagen() {
+      const { data, error } = await sb
+        .from('matches')
+        .select('team_id, match_date, opponent, goals_voor, goals_tegen')
+        .not('goals_voor', 'is', null)
+        .order('match_date', { ascending: false })
+      if (error) fail('uitslagen laden', error)
+      return (data ?? []).map((r) => ({
+        teamId: r.team_id,
+        date: r.match_date,
+        opponent: r.opponent,
+        voor: r.goals_voor ?? 0,
+        tegen: r.goals_tegen ?? 0,
+      }))
     },
 
     async deleteMatch(id) {

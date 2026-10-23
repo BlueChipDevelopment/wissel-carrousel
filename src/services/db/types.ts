@@ -1,4 +1,5 @@
 import type { Formatie, Live, WisselStand } from '@/domain/types'
+import type { Uitslag } from '@/domain/uitslagen'
 
 export interface Team {
   id: string
@@ -37,11 +38,15 @@ export interface Match {
   keepersVast: boolean
   /** Werkelijkheid tijdens de wedstrijd; null zolang alles volgens plan is. */
   live: Live | null
+  /** Uitslag vanuit ons team; allebei null = nog niet ingevuld. Los van de opstelling opgeslagen. */
+  goalsVoor: number | null
+  goalsTegen: number | null
   notes: string | null
   updatedAt: string
 }
 
-export type MatchInput = Omit<Match, 'id' | 'updatedAt'> & { id?: string }
+/** Opslaan van de opstelling; de uitslag gaat apart (`zetUitslag`) en blijft daarbij staan. */
+export type MatchInput = Omit<Match, 'id' | 'updatedAt' | 'goalsVoor' | 'goalsTegen'> & { id?: string }
 
 /**
  * Opslaan geweigerd: de database heeft een nieuwere versie dan de telefoon kende
@@ -79,6 +84,10 @@ export interface DataSource {
   saveMatch(input: MatchInput, verwachtUpdatedAt?: string | null): Promise<Match>
   /** Keepers per kwart vastzetten (`vast` = true) of weer laten afleiden (`vast` = false). */
   zetKeepers(id: string, keepers: string[], vast: boolean): Promise<Match>
+  /** Uitslag invullen (`null` = weghalen). */
+  zetUitslag(id: string, uitslag: { voor: number; tegen: number } | null): Promise<Match>
+  /** Alle ingevulde uitslagen van alle teams, voor het overzicht. */
+  listUitslagen(): Promise<Uitslag[]>
   deleteMatch(id: string): Promise<void>
   /**
    * Meldt elke wijziging aan de wedstrijd van dit team op deze datum door een andere

@@ -87,3 +87,20 @@ describe('demo-opslag: keepers vastzetten', () => {
     expect((await db.getMatch(TEAM, '2026-09-12'))?.keepersVast).toBe(false)
   })
 })
+
+describe('demo-opslag: uitslagen', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('uitslag invullen, blijft staan bij het opslaan van de opstelling, en weer weghalen', async () => {
+    const db = createLocalSource()
+    const m = await db.saveMatch(input())
+    expect(m.goalsVoor).toBeNull()
+    await db.zetUitslag(m.id, { voor: 7, tegen: 3 })
+    const opnieuw = await db.saveMatch(input({ opponent: 'SVMM O8-1' }))
+    expect([opnieuw.goalsVoor, opnieuw.goalsTegen]).toEqual([7, 3])
+    expect(await db.listUitslagen()).toEqual([{ teamId: TEAM, date: '2026-09-12', opponent: 'SVMM O8-1', voor: 7, tegen: 3 }])
+
+    await db.zetUitslag(m.id, null)
+    expect(await db.listUitslagen()).toEqual([])
+  })
+})

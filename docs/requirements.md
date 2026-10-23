@@ -55,7 +55,12 @@ Status: v1.2 (okt 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Do
 6a. **Langs de lijn**: klok starten, slepen op het veld, uitvallers en laatkomers aangeven;
     de rest rekent mee en staat meteen op de telefoon van de andere coach (zie "Live").
 7. Wedstrijden & keeperbeurten: geschiedenis per team, teller per speler, keepers per wedstrijd
-   corrigeren, wedstrijd verwijderen.
+   corrigeren, wedstrijd verwijderen, **uitslag invullen** ("7-3", wij eerst; `goals_voor` /
+   `goals_tegen`, allebei of geen van beide). De uitslag staat los van de opstelling: opslaan
+   van de opstelling laat hem staan.
+7a. **Uitslagen**: één pagina voor alle JO8-teams — totaal (gespeeld, W/G/V, doelpunten,
+    doelsaldo), een tabel per team en de uitslagen per wedstrijd, nieuwste eerst. Voor het
+    eigen overzicht, geen officiële stand (`src/domain/uitslagen.ts`).
 8. Spelers: toevoegen, hernoemen, uit de selectie halen (geschiedenis blijft).
    **Gastspeler**: gewoon toevoegen, bij "Wie is er?" aantikken, na de wedstrijd uit de
    selectie halen. Een speler die er na het opslaan van een wedstrijd bij komt, staat in die

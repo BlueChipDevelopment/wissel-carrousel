@@ -3,6 +3,7 @@ import type { Team } from '@/services/db'
 import { TeamNav } from '@/components/TeamNav'
 import { useTeams } from '@/hooks/useTeams'
 import { MatchesPage } from '@/pages/MatchesPage'
+import { UitslagenPage } from '@/pages/UitslagenPage'
 import { PlayersPage } from '@/pages/PlayersPage'
 import { TeamPage } from '@/pages/TeamPage'
 import { isDemo } from '@/services/db'
@@ -23,6 +24,7 @@ export default function App() {
         <Route index element={<TeamPage />} />
         <Route path="wedstrijden" element={<MatchesPage />} />
         <Route path="spelers" element={<PlayersPage />} />
+        <Route path="uitslagen" element={<UitslagenPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

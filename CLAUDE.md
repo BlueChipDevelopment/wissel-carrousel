@@ -49,6 +49,7 @@ npm run db:types    # database.ts opnieuw genereren na een schemawijziging
 ```
 src/
 ├── domain/        # PUUR: geen React, geen Supabase. schedule.ts = het rekenhart (het plan),
+│                  # uitslagen.ts = W/G/V en totalen per team,
 │                  # live.ts = de werkelijkheid tijdens de wedstrijd (herberekenen, slepen,
 │                  # uitvallers, tellen), klok.ts = de wedstrijdklok. 100% getest.
 │                  # De klok speelt public/kwart.mp3 (scripts/maak-kwartaudio.mjs) mee, zodat het
@@ -61,11 +62,12 @@ src/
 │                  # ScheduleTable (tabel op desktop, kaartjes op mobiel), MatchClock (klok; zet
 │                  # het actieve én op de wedstrijddag het huidige blok mee), MinutesList,
 │                  # LineupEditor, TeamNav
-├── pages/         # TeamPage (opstelling), MatchesPage (geschiedenis), PlayersPage
+├── pages/         # TeamPage (opstelling), MatchesPage (geschiedenis + uitslag invullen),
+│                  # UitslagenPage (alle JO8-teams), PlayersPage
 ├── hooks/         # useTeams
 ├── utils/         # dateUtils — datums altijd YYYY-MM-DD, nooit new Date('YYYY-MM-DD')
 └── types/         # database.ts (Supabase-types, met de hand; regenereren met db:types)
-supabase/migrations/   # schema, RLS (open), seed, historie (begrensd), teams.is_test
+supabase/migrations/   # schema, RLS (open), seed, historie (begrensd), teams.is_test, uitslagen
 e2e/                   # Playwright, demo-stand (helpers/veld.ts: slepen op het veldje)
 e2e/db/                # Playwright tegen de echte Supabase, sandboxteam E2E (eigen config)
 ```

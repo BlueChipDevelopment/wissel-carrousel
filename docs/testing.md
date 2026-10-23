@@ -53,6 +53,7 @@ testproces.
 | `opslaan` | Opstelling, keepers, tegenstander en afwezig komen goed in `matches`; één historierij; een opslag zonder echte wijziging geeft geen nieuwe historierij |
 | `telefoons` | Een sleep komt via realtime op de andere telefoon; twee telefoons met een nieuwe of bestaande wedstrijd krijgen een conflict in plaats van een stille overschrijving; "toch mijn versie" overschrijft bewust; verwijderd op een andere telefoon geeft een melding en wordt niet stil teruggezet; een andere wedstrijd verwijderen raakt de open wedstrijd niet |
 | `keepers` | Corrigeren zet `keepers_vast`, "terug naar geteld" leidt weer af; een keeperswissel halverwege een kwart schuift het corrigeerscherm niet op |
+| `uitslagen` | Uitslag invullen schrijft `goals_voor`/`goals_tegen`; opstelling opslaan laat ze staan; de database weigert een halve uitslag |
 | `regressies` | Gastspeler na het opslaan; sandboxteam onzichtbaar zonder vlag; vangrail |
 
 ### Niet getest

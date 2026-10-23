@@ -49,6 +49,9 @@ export function TeamNav({ teams, team }: { teams: Team[]; team: Team }) {
         <NavLink to={`/team/${team.slug}/spelers`} className={tab}>
           Spelers
         </NavLink>
+        <NavLink to={`/team/${team.slug}/uitslagen`} className={tab}>
+          Uitslagen
+        </NavLink>
       </nav>
     </header>
   )

@@ -4,6 +4,8 @@ import { useTeam } from '@/App'
 import { AANTAL_KWARTEN } from '@/domain/schedule'
 import { keeperPerKwart, keepersGeteld, keepersVan } from '@/domain/live'
 import { keeperTally } from '@/domain/schedule'
+import { leesStand } from '@/domain/uitslagen'
+import { Uitslag } from '@/components/Uitslag'
 import { db, type Match, type Player } from '@/services/db'
 import { formatDate, todayISO } from '@/utils/dateUtils'
 
@@ -16,6 +18,8 @@ export function MatchesPage() {
   const [laden, setLaden] = useState(true)
   /** Wedstrijd waarvan de keepers nu gecorrigeerd worden, met de gekozen keeper per kwart. */
   const [correctie, setCorrectie] = useState<{ id: string; keepers: string[] } | null>(null)
+  /** Wedstrijd waarvan de uitslag nu ingevuld wordt, met wat er getypt is ("7-3"). */
+  const [uitslag, setUitslag] = useState<{ id: string; tekst: string; fout: boolean } | null>(null)
 
   useEffect(() => {
     let live = true
@@ -51,6 +55,21 @@ export function MatchesPage() {
     try {
       vervang(await db.zetKeepers(correctie.id, keepers, true))
       setCorrectie(null)
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const bewaarUitslag = async (weg = false) => {
+    if (!uitslag) return
+    const stand = weg ? null : leesStand(uitslag.tekst)
+    if (!weg && !stand) {
+      setUitslag({ ...uitslag, fout: true })
+      return
+    }
+    try {
+      vervang(await db.zetUitslag(uitslag.id, stand))
+      setUitslag(null)
     } catch (e) {
       setFout(e instanceof Error ? e.message : String(e))
     }
@@ -115,11 +134,12 @@ export function MatchesPage() {
           {matches.length === 0 ? (
             <p className="hint p-4">Nog niets opgeslagen.</p>
           ) : (
-            <table className="w-full min-w-[560px] border-collapse text-[14.5px]">
+            <table className="w-full min-w-[680px] border-collapse text-[14.5px]">
               <thead>
                 <tr className="border-b border-line">
                   <Th>Datum</Th>
                   <Th>Tegenstander</Th>
+                  <Th>Uitslag</Th>
                   <Th>Keepers</Th>
                   <Th>Afwezig</Th>
                   <Th>Stand</Th>
@@ -136,6 +156,56 @@ export function MatchesPage() {
                       {m.date > vandaag && <small className="ml-2 text-muted">gepland</small>}
                     </Td>
                     <Td>{m.opponent ?? '–'}</Td>
+                    <Td>
+                      {uitslag?.id === m.id ? (
+                        <form
+                          className="flex flex-wrap items-center gap-2"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            void bewaarUitslag()
+                          }}
+                        >
+                          <input
+                            className="field w-[76px] text-center"
+                            aria-label="Uitslag, wij eerst"
+                            placeholder="7-3"
+                            inputMode="numeric"
+                            autoFocus
+                            value={uitslag.tekst}
+                            onChange={(e) => setUitslag({ ...uitslag, tekst: e.target.value, fout: false })}
+                          />
+                          <button type="submit" className="btn btn-primary btn-small">
+                            Bewaar
+                          </button>
+                          {m.goalsVoor !== null && (
+                            <button type="button" className="text-[13px] underline" onClick={() => void bewaarUitslag(true)}>
+                              Weghalen
+                            </button>
+                          )}
+                          <button type="button" className="text-[13px] underline" onClick={() => setUitslag(null)}>
+                            Annuleren
+                          </button>
+                          {uitslag.fout && <small className="basis-full text-voor">Typ de stand als 7-3, wij eerst.</small>}
+                        </form>
+                      ) : m.goalsVoor !== null && m.goalsTegen !== null ? (
+                        <span className="flex flex-wrap items-center gap-x-2">
+                          <Uitslag voor={m.goalsVoor} tegen={m.goalsTegen} />
+                          <button
+                            type="button"
+                            className="text-[13px] underline"
+                            onClick={() => setUitslag({ id: m.id, tekst: `${m.goalsVoor}-${m.goalsTegen}`, fout: false })}
+                          >
+                            wijzig
+                          </button>
+                        </span>
+                      ) : m.date <= vandaag ? (
+                        <button type="button" className="text-[13px] underline" onClick={() => setUitslag({ id: m.id, tekst: '', fout: false })}>
+                          Invullen
+                        </button>
+                      ) : (
+                        <span className="text-muted">–</span>
+                      )}
+                    </Td>
                     <Td>
                       {correctie?.id === m.id ? (
                         <form

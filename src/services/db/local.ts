@@ -19,12 +19,14 @@ function lees(): Store {
     if (raw) {
       const v = JSON.parse(raw) as Partial<Store>
       if (Array.isArray(v.players) && Array.isArray(v.matches)) {
-        // Oudere opslag zonder keepers/live/keepersVast: aanvullen.
+        // Oudere opslag zonder keepers/live/keepersVast/uitslag: aanvullen.
         const matches = v.matches.map((m) => ({
           ...m,
           keepers: m.keepers ?? [],
           keepersVast: m.keepersVast ?? false,
           live: m.live ?? null,
+          goalsVoor: m.goalsVoor ?? null,
+          goalsTegen: m.goalsTegen ?? null,
         }))
         return { players: v.players, matches }
       }
@@ -116,6 +118,9 @@ export function createLocalSource(): DataSource {
       const m: Match = {
         ...input,
         id: bestaand?.id ?? input.id ?? uuid(),
+        // De uitslag gaat apart (zetUitslag): opslaan van de opstelling laat hem staan.
+        goalsVoor: bestaand?.goalsVoor ?? null,
+        goalsTegen: bestaand?.goalsTegen ?? null,
         updatedAt: new Date().toISOString(),
       }
       store = {
@@ -134,6 +139,32 @@ export function createLocalSource(): DataSource {
       store = { ...store, matches: [...store.matches.filter((x) => x.id !== m.id), m] }
       schrijf(store)
       return wacht({ ...m })
+    },
+
+    async zetUitslag(id, uitslag) {
+      store = lees()
+      const bestaand = store.matches.find((x) => x.id === id)
+      if (!bestaand) throw new Error('uitslag opslaan: wedstrijd niet gevonden')
+      const m: Match = {
+        ...bestaand,
+        goalsVoor: uitslag?.voor ?? null,
+        goalsTegen: uitslag?.tegen ?? null,
+        updatedAt: new Date().toISOString(),
+      }
+      store = { ...store, matches: [...store.matches.filter((x) => x.id !== m.id), m] }
+      schrijf(store)
+      return wacht({ ...m })
+    },
+
+    listUitslagen() {
+      store = lees()
+      return wacht(
+        store.matches.flatMap((m) =>
+          m.goalsVoor === null || m.goalsTegen === null
+            ? []
+            : [{ teamId: m.teamId, date: m.date, opponent: m.opponent, voor: m.goalsVoor, tegen: m.goalsTegen }],
+        ),
+      )
     },
 
     async deleteMatch(id) {

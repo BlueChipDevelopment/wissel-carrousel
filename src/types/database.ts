@@ -20,6 +20,8 @@ export type Database = {
           afwezig: string[]
           created_at: string
           formatie: string
+          goals_tegen: number | null
+          goals_voor: number | null
           id: string
           keepers: string[]
           keepers_vast: boolean
@@ -37,6 +39,8 @@ export type Database = {
           afwezig?: string[]
           created_at?: string
           formatie?: string
+          goals_tegen?: number | null
+          goals_voor?: number | null
           id?: string
           keepers?: string[]
           keepers_vast?: boolean
@@ -54,6 +58,8 @@ export type Database = {
           afwezig?: string[]
           created_at?: string
           formatie?: string
+          goals_tegen?: number | null
+          goals_voor?: number | null
           id?: string
           keepers?: string[]
           keepers_vast?: boolean

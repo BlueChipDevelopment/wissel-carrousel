@@ -65,6 +65,8 @@ export interface MatchRij {
   afwezig: string[]
   keepers: string[]
   keepers_vast: boolean
+  goals_voor: number | null
+  goals_tegen: number | null
   live: { huidig: number; blokken: unknown[] } | null
   updated_at: string
 }
@@ -73,7 +75,7 @@ export interface MatchRij {
 export async function wedstrijd(datum: string): Promise<MatchRij | null> {
   const { data, error } = await db()
     .from('matches')
-    .select('id, match_date, opponent, achter, voor, afwezig, keepers, keepers_vast, live, updated_at')
+    .select('id, match_date, opponent, achter, voor, afwezig, keepers, keepers_vast, live, goals_voor, goals_tegen, updated_at')
     .eq('team_id', E2E_TEAM.id)
     .eq('match_date', datum)
     .maybeSingle()
