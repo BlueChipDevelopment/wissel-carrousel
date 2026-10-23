@@ -1,6 +1,6 @@
 # Requirements — Wisselcarrousel
 
-Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doorn.
+Status: v1.2 (okt 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doorn.
 
 ## Spelregels waar alles op rust
 
@@ -40,10 +40,15 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 
 ## Wat de coach ziet en doet
 
-1. Team kiezen (JO8-1 … JO8-4).
+1. Team kiezen (JO8-1 … JO8-4). Teams met `is_test` (het e2e-sandboxteam) ziet een coach niet.
 2. Wedstrijddatum (standaard de eerstvolgende opgeslagen wedstrijd, anders komende zaterdag);
-   tegenstander optioneel.
+   tegenstander optioneel. Het programma van voetbal.nl staat vooruit in de app (zie
+   `docs/deploy.md`, "Programma invoeren"), met de tegenstander als `Club O8-x (thuis|uit HH:MM)`.
+   Een vooruit ingevoerde wedstrijd begint met de linies, stand en formatie van de laatste
+   wedstrijd ervoor; husselen doet de coach per week zelf.
 3. Aanwezigheid aantikken (direct onder de wedstrijdkop; tijdens de wedstrijd één regel); linies ordenen; wisselstand en formatie kiezen; eventueel husselen.
+   Het **i'tje** in de wedstrijdkop toont de spelregels en de wisselregels van de stand die op
+   dat moment gekozen is (met linies of "vrij").
 4. Per blok: veldje, rollen, bank met bestemming, en "wie voor wie" bij de start van dat blok.
 5. Hele wedstrijd in één tabel + speelminuten per speler.
 6. **Opslaan** → de wedstrijd telt vanaf de wedstrijddag mee in de keeperbeurten.
@@ -52,6 +57,10 @@ Status: v1 (sept 2026). Gebruikers: de coaches van de vier JO8-teams van DEV Doo
 7. Wedstrijden & keeperbeurten: geschiedenis per team, teller per speler, keepers per wedstrijd
    corrigeren, wedstrijd verwijderen.
 8. Spelers: toevoegen, hernoemen, uit de selectie halen (geschiedenis blijft).
+   **Gastspeler**: gewoon toevoegen, bij "Wie is er?" aantikken, na de wedstrijd uit de
+   selectie halen. Een speler die er na het opslaan van een wedstrijd bij komt, staat in die
+   wedstrijd eerst op afwezig (anders zou hij "erbij" staan zonder plek in het schema). Let op:
+   de hussel zet een gast achterin, want hij heeft nog nooit gekeept.
 
 ## Live tijdens de wedstrijd (v1.1)
 
@@ -92,7 +101,9 @@ Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast hou
   Per kwart telt elke keeper één beurt (bij een keeperswissel halverwege dus twee). De app
   schrijft ze in `matches.keepers`; oudere wedstrijden vallen terug op `achter[0..3]`.
 - **Keepers corrigeren.** Klopt de telling niet (klok niet gebruikt, verkeerd gesleept), dan
-  zet je op de pagina Wedstrijden met **Corrigeer** de keeper per kwart. De lijst staat dan vast
+  zet je op de pagina Wedstrijden met **Corrigeer** de keeper per kwart. Het scherm begint met
+  wie elk kwart begon (`keeperPerKwart`), niet met `keepers[q]`: bij een keeperswissel
+  halverwege staan daar meer dan vier namen. De lijst staat dan vast
   ("gecorrigeerd"): opslaan vanaf de opstellingspagina leidt hem niet opnieuw af. **Terug naar
   geteld** haalt de correctie weer weg.
 - **Beide coaches zien hetzelfde.** Elke live-actie wordt direct opgeslagen en via Supabase
@@ -101,9 +112,19 @@ Het **plan** (linies, volgorde, stand, formatie) blijft het anker; daarnaast hou
   telefoon zelf als laatste zag; is een andere telefoon eerder geweest, dan wordt er niets
   opgeslagen en kiest de coach: **Die versie ophalen** of **Toch mijn versie opslaan**. Zo kan
   een telefoon met een oud plan de live-stand van de andere niet meer per ongeluk wegschrijven.
-  Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op.
-- **Historie.** Elke opslag (ook het stille opslaan na een live-actie) komt als rij in
-  `match_history`, met tijdstip. Daarmee is een misgelopen samenvoeging altijd terug te zoeken.
+  Planwijzigingen (linies, stand, formatie) sla je zoals altijd zelf op. Precies:
+  - ook een **nieuwe** wedstrijd: slaan twee telefoons dezelfde datum op, dan krijgt de
+    tweede de keuze (insert, geen upsert);
+  - een live-actie die nog op de stille opslag wacht (400 ms) telt als niet opgeslagen: een
+    binnenkomende versie overschrijft hem niet, de coach kiest;
+  - wat er tijdens een opslag verandert blijft "niet opgeslagen", en realtime-berichten die
+    tijdens een opslag binnenkomen (vaak de eigen echo) wachten tot die klaar is;
+  - **verwijderd** op een andere telefoon: melding, de wedstrijd blijft hier staan als niet
+    opgeslagen en live-acties zetten hem niet stil terug; zelf opslaan zet hem er bewust weer in.
+- **Historie.** Elke opslag die echt iets verandert (ook het stille opslaan na een live-actie)
+  komt als rij in `match_history`, met tijdstip; een opslag waarbij alleen `updated_at`
+  verandert niet. Per wedstrijd blijven de nieuwste 200 versies staan (een drukke wedstrijd met
+  twee telefoons is zo'n 80). Daarmee is een misgelopen samenvoeging terug te zoeken.
 - Wissel je van bankstand (5 min ↔ kwart) terwijl er een live-stand is, dan begint die opnieuw.
 
 ## De klok in de broekzak

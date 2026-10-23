@@ -17,7 +17,8 @@ keeperbeurten gedeeld moeten worden over telefoons en coaches heen.
 
 - **React 19 + Vite 7 + TypeScript**, SPA. **Tailwind 4** (config in `src/index.css` via `@theme`).
 - **Supabase** (Postgres + RLS) — Chris' account. Nog **geen login** (zie ADR-0001).
-- **Netlify** — statische SPA, auto-deploy vanuit GitHub. **PWA** via `vite-plugin-pwa`.
+- **Netlify** — statische SPA. **PWA** via `vite-plugin-pwa`. De GitHub-koppeling is kapot:
+  na een push zelf `npm run build && npx netlify deploy --prod --dir dist` (zie `docs/deploy.md`).
 - Tests: **Vitest** (domeinlogica volledig unit-getest) en **Playwright**: `e2e/` in de demo-stand
   (desktop + 390 px) en `e2e/db/` tegen de echte Supabase in sandboxteam "E2E" (`is_test`). Zie
   [`docs/testing.md`](docs/testing.md).
@@ -64,19 +65,25 @@ src/
 ├── hooks/         # useTeams
 ├── utils/         # dateUtils — datums altijd YYYY-MM-DD, nooit new Date('YYYY-MM-DD')
 └── types/         # database.ts (Supabase-types, met de hand; regenereren met db:types)
-supabase/migrations/   # schema, RLS (open), seed
+supabase/migrations/   # schema, RLS (open), seed, historie (begrensd), teams.is_test
+e2e/                   # Playwright, demo-stand (helpers/veld.ts: slepen op het veldje)
+e2e/db/                # Playwright tegen de echte Supabase, sandboxteam E2E (eigen config)
 ```
 
 ### Harde regels
 
 - **Domeinlogica blijft puur.** `src/domain/` importeert niets uit React of services. Elke
-  wijziging aan de rekenregels krijgt een test in `schedule.test.ts`.
+  wijziging aan de rekenregels krijgt een test in `schedule.test.ts` of `live.test.ts`.
 - **Geen `supabase.*` buiten `src/services/db/`.** Pages en components praten met `db` uit
   `@/services/db` (interface `DataSource`). De demo-stand (`local.ts`) moet blijven werken —
   dat is ook hoe je ontwikkelt zonder credentials.
 - **Datums** als `YYYY-MM-DD` tekst (Postgres `date`). Zie `src/utils/dateUtils.ts`.
 - **Nederlandse UI**, alleen voornamen van spelers. Mobile-first: test op 390px en 1100px.
 - **Seed op twee plekken** (`src/data/seed.ts` en de seed-migration) — gelijk houden.
+- **`.env.local` is productie.** Handmatig testen in de demo-stand of via `npm run test:e2e:db`;
+  die suite schrijft alleen in het team met `is_test` (vangrail in `e2e/db/helpers/db.ts`).
+- **Realtime/opslaan veranderd? Draai `npm run test:e2e:db`.** De demo-stand kan realtime,
+  de unique-violation en DELETE-events van Supabase niet nabootsen.
 
 ### De rekenregels in één alinea
 
@@ -100,8 +107,16 @@ huidige blok is (vóór de aftrap) past het plan aan (`zetOpPlekInPlan`), geen l
 (debounce) en gaan via realtime naar de andere telefoons. Opslaan is optimistic locking op
 `updated_at` (`saveMatch(input, verwachtUpdatedAt)` → `ConflictError`): een telefoon met een
 oudere versie overschrijft nooit stilletjes, de coach kiest "die versie ophalen" of "toch mijn
-versie". Keepers zijn per wedstrijd achteraf te corrigeren (`keepers_vast`, pagina Wedstrijden);
-dan laat `bewaar` `keepers` staan. Elke opslag komt via trigger in `match_history`.
+versie". Een nieuwe wedstrijd slaat op met `verwachtUpdatedAt = null` (insert; bestaat hij
+intussen → `ConflictError`). Lokale wijzigingen worden geteld (`wijzigingen`/`gedeeld`): een
+live-actie die nog op de stille opslag wacht telt als niet gedeeld, realtime tijdens een opslag
+wacht (`uitgesteld`), en verwijderd elders (`subscribeMatch` krijgt het `matchId`; DELETE luistert
+ongefilterd, want Supabase filtert deletes niet) laat de wedstrijd staan als niet opgeslagen.
+Een actieve speler die niet in een opgeslagen wedstrijd staat (gast) komt daarin op afwezig
+(`draftVanMatch`). Keepers zijn per wedstrijd achteraf te corrigeren (`keepers_vast`, pagina
+Wedstrijden, `keeperPerKwart`); dan laat `bewaar` `keepers` staan. Beide pagina's tellen met
+`keepersGeteld`. Elke opslag die echt iets verandert komt via trigger in `match_history`
+(nieuwste 200 per wedstrijd).
 
 ## Toegang (belangrijk)
 
