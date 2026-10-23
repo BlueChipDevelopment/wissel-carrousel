@@ -169,3 +169,26 @@ test('een zelf gezet blok krijgt een handje en is weer los te laten', async ({ p
   await expect(page.getByRole('button', { name: '↶ Ongedaan: 10–15 loslaten' })).toBeVisible()
   expect(await markerNamen(page)).toEqual(voor)
 })
+
+test('een sleep die nog niet gedeeld is, raakt niet stil kwijt als een andere telefoon net opslaat', async ({ context }) => {
+  const a = await context.newPage()
+  const b = await context.newPage()
+  await openTeam(a)
+  await openTeam(b)
+  await sleep(a, PLEK.bank0, PLEK.verdedigerLinks)
+  await expect(a.getByText('Gedeeld met de andere telefoons.')).toBeVisible()
+  await expect(b.getByText('Bijgewerkt vanaf een andere telefoon.')).toBeVisible()
+
+  // A sleept opnieuw; binnen de 400 ms vóór het delen slaat "telefoon B" een nieuwere versie op.
+  await sleep(a, PLEK.bank0, PLEK.verdedigerLinks)
+  await b.evaluate(() => {
+    const key = 'wisselcarrousel.local.v1'
+    const s = JSON.parse(localStorage.getItem(key)!)
+    s.matches[0] = { ...s.matches[0], opponent: 'Van telefoon B', updatedAt: new Date(Date.now() + 1000).toISOString() }
+    localStorage.setItem(key, JSON.stringify(s))
+  })
+
+  // A gooit zijn sleep niet weg, maar laat de coach kiezen.
+  await expect(a.getByText('Een andere telefoon heeft deze wedstrijd intussen aangepast.')).toBeVisible()
+  await expect(a.getByText('Bijgewerkt vanaf een andere telefoon.')).toHaveCount(0)
+})

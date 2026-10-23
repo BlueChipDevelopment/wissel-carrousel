@@ -80,19 +80,30 @@ export function TeamPage() {
 
   const draftRef = useRef<Draft | null>(null)
   draftRef.current = draft
+  /** Meteen bijgewerkt (niet pas bij de volgende render): realtime en opslaan lezen hem tussendoor. */
   const dirtyRef = useRef(false)
-  dirtyRef.current = dirty
+  const zetDirty = useCallback((v: boolean) => {
+    dirtyRef.current = v
+    setDirty(v)
+  }, [])
   const spelersRef = useRef<Player[]>([])
   spelersRef.current = spelers
   /** updated_at van de laatst bekende versie op de server; oudere realtime-berichten negeren we. */
   const laatstBewaard = useRef<string>('')
+  /** Telt lokale wijzigingen (plan en live); `gedeeld` is de stand die op de server staat. */
+  const wijzigingen = useRef(0)
+  const gedeeld = useRef(0)
+  /** Lopende opslagen. Realtime-berichten die intussen binnenkomen (vaak onze eigen echo) wachten. */
+  const bezig = useRef(0)
+  const uitgesteld = useRef<Match | null>(null)
 
   const naam = useCallback((id: string) => spelers.find((p) => p.id === id)?.name ?? '?', [spelers])
 
   const laadDraft = (d: Draft, updatedAt: string) => {
     setDraft(d)
     laatstBewaard.current = updatedAt
-    setDirty(false)
+    gedeeld.current = wijzigingen.current
+    zetDirty(false)
     setUndo([])
     setDiff([])
     setRemote(null)
@@ -124,24 +135,38 @@ export function TeamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team.id, team.slug])
 
-  // Realtime: dezelfde wedstrijd op een andere telefoon. Last-write-wins op updated_at.
+  /**
+   * Een versie van de server, van een andere telefoon. Staat hier nog iets dat niet gedeeld is
+   * (planwijziging of een live-actie die nog op de stille opslag wacht), dan niet overschrijven
+   * maar de coach laten kiezen.
+   */
+  const ontvang = useCallback((m: Match) => {
+    if (draftRef.current?.date !== m.date) return
+    if (laatstBewaard.current && m.updatedAt <= laatstBewaard.current) return
+    setMatches((l) => [m, ...l.filter((x) => x.id !== m.id)].sort((a, b) => b.date.localeCompare(a.date)))
+    if (dirtyRef.current || wijzigingen.current !== gedeeld.current) {
+      setRemote(m)
+      return
+    }
+    laatstBewaard.current = m.updatedAt
+    setDraft((d) => (d && d.date === m.date ? draftVanMatch(m, spelersRef.current) : d))
+    setUndo([])
+    setStatus('Bijgewerkt vanaf een andere telefoon.')
+  }, [])
+
+  // Realtime: dezelfde wedstrijd op een andere telefoon.
   const datum = draft?.date
   useEffect(() => {
     if (!datum) return
     return db.subscribeMatch(team.id, datum, (m) => {
       if (!m) return
-      if (laatstBewaard.current && m.updatedAt <= laatstBewaard.current) return
-      setMatches((l) => [m, ...l.filter((x) => x.id !== m.id)].sort((a, b) => b.date.localeCompare(a.date)))
-      if (dirtyRef.current) {
-        setRemote(m)
+      if (bezig.current) {
+        if (!uitgesteld.current || m.updatedAt > uitgesteld.current.updatedAt) uitgesteld.current = m
         return
       }
-      laatstBewaard.current = m.updatedAt
-      setDraft((d) => (d && d.date === m.date ? draftVanMatch(m, spelersRef.current) : d))
-      setUndo([])
-      setStatus('Bijgewerkt vanaf een andere telefoon.')
+      ontvang(m)
     })
-  }, [team.id, datum])
+  }, [team.id, datum, ontvang])
 
   const live = useMemo(() => (draft ? liveVan(draft) : null), [draft])
   const sch = useMemo(() => (draft && live ? samengesteld(draft.opstelling, live) : []), [draft, live])
@@ -168,7 +193,8 @@ export function TeamPage() {
   /** Planwijziging: handmatig opslaan, zoals altijd. */
   const wijzig = (patch: Partial<Draft>) => {
     setDraft((d) => (d ? { ...d, ...patch } : d))
-    setDirty(true)
+    wijzigingen.current++
+    zetDirty(true)
     setStatus(null)
   }
 
@@ -205,6 +231,7 @@ export function TeamPage() {
         setDiff(verschillen(samengesteld(d.opstelling, oud), samengesteld(plan, nieuw), plan.formatie))
       }
       setDraft({ ...d, ...planPatch, live: nieuw })
+      wijzigingen.current++
       setLiveTick((t) => t + 1)
     },
     [],
@@ -221,6 +248,8 @@ export function TeamPage() {
       if (!d) return
       if (!stil) setStatus('Bezig…')
       setFout(null)
+      const bij = wijzigingen.current
+      bezig.current++
       try {
         // Bekende versie: alleen daaroverheen. Nog geen id: alleen aanmaken als niemand ons voor was.
         const verwacht = forceer ? undefined : d.id ? laatstBewaard.current || undefined : null
@@ -243,24 +272,34 @@ export function TeamPage() {
           verwacht,
         )
         laatstBewaard.current = saved.updatedAt
+        gedeeld.current = bij
         setMatches((m) => [saved, ...m.filter((x) => x.id !== saved.id)].sort((a, b) => b.date.localeCompare(a.date)))
         setDraft((x) => (x && x.date === saved.date ? { ...x, id: saved.id, keepers: saved.keepers } : x))
-        setDirty(false)
+        // Tijdens het opslaan nog iets veranderd? Dat staat er niet in, dus blijft het "niet opgeslagen".
+        if (wijzigingen.current === bij) zetDirty(false)
         setRemote(null)
         setStatus(stil ? 'Gedeeld met de andere telefoons.' : `Opgeslagen voor ${formatDateShort(saved.date)}.`)
       } catch (e) {
         if (e instanceof ConflictError) {
           setMatches((m) => [e.huidig, ...m.filter((x) => x.id !== e.huidig.id)].sort((a, b) => b.date.localeCompare(a.date)))
           setRemote(e.huidig)
-          setDirty(true)
+          zetDirty(true)
           setStatus('Niet opgeslagen: een andere telefoon was eerder.')
           return
         }
         setFout(e instanceof Error ? e.message : String(e))
         setStatus(null)
+      } finally {
+        // Wat er tijdens het opslaan binnenkwam: onze eigen echo valt nu weg op updated_at, de rest telt.
+        bezig.current--
+        const u = uitgesteld.current
+        if (!bezig.current && u) {
+          uitgesteld.current = null
+          ontvang(u)
+        }
       }
     },
-    [team.id],
+    [team.id, zetDirty, ontvang],
   )
 
   // Elke live-actie wordt kort daarna stil opgeslagen (last-write-wins).
@@ -297,6 +336,7 @@ export function TeamPage() {
     setUndo((u) => u.slice(0, -1))
     setDraft((d) => (d ? { ...d, opstelling: s.opstelling, afwezig: s.afwezig, live: s.live } : d))
     setDiff([])
+    wijzigingen.current++
     setLiveTick((t) => t + 1)
   }
 

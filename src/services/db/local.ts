@@ -68,7 +68,9 @@ export function createLocalSource(): DataSource {
           .map((p) => ({ ...p })),
       ),
 
+    // Schrijven begint met lees(): een ander tabblad kan intussen hebben opgeslagen.
     async createPlayer(teamId, name) {
+      store = lees()
       const max = Math.max(0, ...store.players.filter((p) => p.teamId === teamId).map((p) => p.sortOrder))
       const p: Player = { id: uuid(), teamId, name, active: true, sortOrder: max + 1 }
       store = { ...store, players: [...store.players, p] }
@@ -77,6 +79,7 @@ export function createLocalSource(): DataSource {
     },
 
     async updatePlayer(id, patch) {
+      store = lees()
       let out: Player | undefined
       store = {
         ...store,
@@ -134,6 +137,7 @@ export function createLocalSource(): DataSource {
     },
 
     async deleteMatch(id) {
+      store = lees()
       store = { ...store, matches: store.matches.filter((x) => x.id !== id) }
       schrijf(store)
       return wacht(undefined)
